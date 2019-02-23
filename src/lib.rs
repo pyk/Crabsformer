@@ -1,51 +1,58 @@
-pub enum DataType {
-    Int64,
-    Float64
-}
-
-// Array is a homogeneous multidimensional array.
-pub struct Array<T> {
-    // the number of axes (dimensions) of the array.
-    ndim: usize,
-    // the dimensions of the array. This is a tuple of integers
-    // indicating the size of the array in each dimension.
-    // For a matrix with n rows and m columns, shape will be (n,m).
-    // The length of the shape tuple is therefore
-    // the number of axes, ndim.
-    shape: Vec<usize>,
-    // the total number of elements of the array. This is equal to
-    // the product of the elements of shape.
-    size: usize,
-    // an Enum describing the type of the elements in the array.
-    // One can create or specify dtype’s using enum DataType.
-    // dtype: DataType,
-
-    // the size in bytes of each element of the array.
-    // For example, an array of elements of type float64
-    // has itemsize 8 (=64/8),
-    // while one of type complex32 has itemsize 4 (=32/8).
-    // It is equivalent to ndarray.dtype.itemsize.
-    // item_size: usize,
-    // the buffer containing the actual elements of the array.
-    // Normally, we won’t need to use this attribute because we will
-    // access the elements in an array using indexing facilities.
-    data: Vec<T>,
-}
-
-impl<T> Array<T> {
-    // Initialize Array with specified shape
-    pub fn with_shape(shape: Vec<usize>) -> Array<T> {
-        let ndim = shape.len();
-        let size = shape.iter().product();
-        return Array {
-            ndim,
-            shape,
-            size,
-            data: Vec::new(),
-        };
+pub fn zeros(shape: [usize; 2]) -> Vec<Vec<i64>> {
+    let mut rows = Vec::with_capacity(shape[0]);
+    for _ in 0..shape[0] {
+        let mut cols = Vec::with_capacity(shape[1]);
+        for _ in 0..shape[1] {
+            cols.push(0);
+        }
+        rows.push(cols);
     }
+    rows
+}
 
+pub trait Array1D {
+    // Array creation routines
+    fn zeros(shape: usize) -> Self;
+}
 
+impl Array1D for Vec<i64> {
+    fn zeros(shape: usize) -> Vec<i64> {
+        let mut array = Vec::with_capacity(shape);
+        for _ in 0..shape {
+            array.push(0);
+        }
+        array
+    }
+}
+
+impl Array1D for Vec<i32> {
+    fn zeros(shape: usize) -> Vec<i32> {
+        let mut array = Vec::with_capacity(shape);
+        for _ in 0..shape {
+            array.push(0);
+        }
+        array
+    }
+}
+
+impl Array1D for Vec<f64> {
+    fn zeros(shape: usize) -> Vec<f64> {
+        let mut array = Vec::with_capacity(shape);
+        for _ in 0..shape {
+            array.push(0.0);
+        }
+        array
+    }
+}
+
+impl Array1D for Vec<f32> {
+    fn zeros(shape: usize) -> Vec<f32> {
+        let mut array = Vec::with_capacity(shape);
+        for _ in 0..shape {
+            array.push(0.0);
+        }
+        array
+    }
 }
 
 #[cfg(test)]
@@ -53,20 +60,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn test_fn_zeros() {
+        let arr2d: Vec<Vec<i64>> = zeros([2, 2]);
+        assert_eq!(arr2d, vec![
+            vec![0, 0],
+            vec![0, 0],
+        ])
     }
 
     #[test]
-    fn test_with_shape() {
-        let arr: Array<i64> = Array::with_shape(vec![2, 3]);
-        assert_eq!(arr.ndim, 2);
-        assert_eq!(arr.shape, vec![2, 3]);
-        assert_eq!(arr.size, 6);
+    fn test_zeros() {
+        // 1D array
+        let array_1d_i64: Vec<i64> = Vec::zeros(5);
+        assert_eq!(array_1d_i64, vec![0, 0, 0, 0, 0]);
+
+        let array_1d_i32: Vec<i32> = Vec::zeros(5);
+        assert_eq!(array_1d_i32, vec![0, 0, 0, 0, 0]);
+
+        let array_1d_f64: Vec<f64> = Vec::zeros(5);
+        assert_eq!(array_1d_f64, vec![0.0, 0.0, 0.0, 0.0, 0.0]);
+
+        let array_1d_f32: Vec<f32> = Vec::zeros(5);
+        assert_eq!(array_1d_f32, vec![0.0, 0.0, 0.0, 0.0, 0.0]);
+
     }
-
-    // #[test]
-    // fn test_zeros() {
-
-    // }
 }
