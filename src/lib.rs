@@ -33,8 +33,10 @@ pub fn zeros(shape: [usize; 2]) -> Vec<Vec<i64>> {
     rows
 }
 
-///
-trait OneDimensional<T> where T: Num + Copy {
+/// One-dimensional vectors
+pub trait OneDimensional<T> where T: Num + Copy {
+    /// Returns new one-dimensional vector with specified `size`.
+    // TODO(pyk): Add example
     fn one_dim(size: usize) -> Self;
 }
 
@@ -44,7 +46,12 @@ impl<T> OneDimensional<T> for Vec<T> where T: Num + Copy {
     }
 }
 
-trait TwoDimensional<T> where T: Num + Copy {
+/// Two-dimensional vectors
+pub trait TwoDimensional<T> where T: Num + Copy {
+    /// Returns new two-dimensional vector with specified
+    /// number of rows and number of columns.
+    ///
+    // TODO(pyk): Add example
     fn two_dim(nrows: usize, ncols: usize) -> Self;
 }
 
@@ -58,7 +65,17 @@ impl<T> TwoDimensional<T> for Vec<Vec<T>> where T: Num + Copy {
     }
 }
 
-trait ThreeDimensional<T> where T: Num + Copy {
+/// Three-dimensional vectors
+pub trait ThreeDimensional<T> where T: Num + Copy {
+    /// Returns new three-dimensional vector with specified shape.
+    ///
+    /// # Arguments
+    ///
+    /// * `n1` - A number of elements in axis 1.
+    /// * `n2` - A number of elements in axis 2.
+    /// * `n3` - A number of elements in axis 3.
+    ///
+    // TODO(pyk): Add example
     fn three_dim(n1: usize, n2: usize, n3: usize) -> Self;
 }
 
@@ -76,7 +93,18 @@ impl<T> ThreeDimensional<T> for Vec<Vec<Vec<T>>> where T: Num + Copy {
     }
 }
 
-trait FourDimensional<T> where T: Num + Copy {
+/// Four-dimensional vectors
+pub trait FourDimensional<T> where T: Num + Copy {
+    /// Returns new four-dimensional vector with specified shape.
+    ///
+    /// # Arguments
+    ///
+    /// * `n1` - A number of elements in axis 1.
+    /// * `n2` - A number of elements in axis 2.
+    /// * `n3` - A number of elements in axis 3.
+    /// * `n4` - A number of elements in axis 4.
+    ///
+    // TODO(pyk): Add example
     fn four_dim(n1: usize, n2: usize, n3: usize, n4: usize) -> Self;
 }
 
@@ -99,9 +127,9 @@ impl<T> FourDimensional<T> for Vec<Vec<Vec<Vec<T>>>> where T: Num + Copy {
     }
 }
 
-
-trait Full<T> where T: Num + Copy {
-    // Return a new array of given shape and type, filled with `value`.
+/// Fillable vectors
+pub trait Full<T> where T: Num + Copy {
+    /// Returns a new array of given shape and type, filled with `value`.
     fn full(&mut self, value: T) -> Self;
 }
 
