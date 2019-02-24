@@ -39,3 +39,18 @@ is [doesn't support function overloading](https://blog.rust-lang.org/2015/05/11/
 
 So, we can use trait to solve this right? but how?
 
+# with_size, with_shape, one_dim, two_dim ...
+
+We will replace `Vec::with_size(x)` and `Vec::with_shape(&[x])`
+with `Vec::one_dim(x)`, `Vec::two_dim(a,b)`, `Vec::three_dim(a,b,c)`
+and `Vec::four_dim(a,b,c,d)`. I think it's more intuitive.
+
+For example:
+
+```
+let a: Vec<Vec<i64>> = Vec::two_dim(x, y)
+```
+
+It clearly says, initialize 2D vector. Oke, Nice!
+
+

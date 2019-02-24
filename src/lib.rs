@@ -14,48 +14,70 @@ pub fn zeros(shape: [usize; 2]) -> Vec<Vec<i64>> {
     rows
 }
 
-trait Size<T> where T: Num + Copy {
-    fn with_size(size: usize) -> Vec<T>;
+trait OneDimensional<T> where T: Num + Copy {
+    fn one_dim(size: usize) -> Self;
 }
 
-impl<T> Size<T> for Vec<T> where T: Num + Copy {
-    fn with_size(size: usize) -> Vec<T> {
+impl<T> OneDimensional<T> for Vec<T> where T: Num + Copy {
+    fn one_dim(size: usize) -> Vec<T> {
         Vec::with_capacity(size)
     }
 }
 
-trait Shape<T> where T: Num + Copy {
-    // TODO: don't use slice.s
-    fn with_shape(shape: &[usize]) -> Self;
+trait TwoDimensional<T> where T: Num + Copy {
+    fn two_dim(nrows: usize, ncols: usize) -> Self;
 }
 
-impl<T> Shape<T> for Vec<Vec<T>> where T: Num + Copy {
-    fn with_shape(shape: &[usize]) -> Vec<Vec<T>> {
-        let mut rows: Vec<Vec<T>> = Vec::with_capacity(shape[0]);
-        for _ in 0..shape[0] {
-            rows.push(Vec::with_capacity(shape[1]));
+impl<T> TwoDimensional<T> for Vec<Vec<T>> where T: Num + Copy {
+    fn two_dim(nrows: usize, ncols: usize) -> Vec<Vec<T>> {
+        let mut array2d: Vec<Vec<T>> = Vec::with_capacity(nrows);
+        for _ in 0..nrows {
+            array2d.push(Vec::with_capacity(ncols));
         }
-        rows
+        array2d
     }
 }
 
-impl<T> Shape<T> for Vec<Vec<Vec<T>>> where T: Num + Copy {
-    fn with_shape(shape: &[usize]) -> Vec<Vec<Vec<T>>> {
-        let mut rows: Vec<Vec<Vec<T>>> = Vec::with_capacity(shape[0]);
-        for _ in 0..shape[0] {
-            let mut cols: Vec<Vec<T>> = Vec::with_capacity(shape[1]);
-            for _ in 0..shape[1] {
-                cols.push(Vec::with_capacity(shape[2]));
+trait ThreeDimensional<T> where T: Num + Copy {
+    fn three_dim(n1: usize, n2: usize, n3: usize) -> Self;
+}
+
+impl<T> ThreeDimensional<T> for Vec<Vec<Vec<T>>> where T: Num + Copy {
+    fn three_dim(n1: usize, n2: usize, n3: usize) -> Vec<Vec<Vec<T>>> {
+        let mut array3d: Vec<Vec<Vec<T>>> = Vec::with_capacity(n1);
+        for _ in 0..n1 {
+            let mut array2d: Vec<Vec<T>> = Vec::with_capacity(n2);
+            for _ in 0..n2 {
+                array2d.push(Vec::with_capacity(n3));
             }
-            rows.push(cols);
+            array3d.push(array2d);
         }
-        rows
+        array3d
     }
 }
 
-// trait Shape4D<T> where T: Num + Copy {
-//     fn with_shape(shape: [usize; 4]) -> Vec<Vec<Vec<Vec<T>>>>;
-// }
+trait FourDimensional<T> where T: Num + Copy {
+    fn four_dim(n1: usize, n2: usize, n3: usize, n4: usize) -> Self;
+}
+
+
+impl<T> FourDimensional<T> for Vec<Vec<Vec<Vec<T>>>> where T: Num + Copy {
+    fn four_dim(n1: usize, n2: usize, n3: usize, n4: usize) -> Vec<Vec<Vec<Vec<T>>>> {
+        let mut array4d: Vec<Vec<Vec<Vec<T>>>> = Vec::with_capacity(n1);
+        for _ in 0..n1 {
+            let mut array3d: Vec<Vec<Vec<T>>> = Vec::with_capacity(n2);
+            for _ in 0..n2 {
+                let mut array2d: Vec<Vec<T>> = Vec::with_capacity(n3);
+                for _ in 0..n3 {
+                    array2d.push(Vec::with_capacity(n4));
+                }
+                array3d.push(array2d);
+            }
+            array4d.push(array3d)
+        }
+        array4d
+    }
+}
 
 
 trait Fill<T> where T: Num + Copy {
@@ -97,37 +119,54 @@ mod tests {
     }
 
     #[test]
-    fn test_with_size() {
-        let arr: Vec<i32> = Vec::with_size(5);
-        assert_eq!(arr.capacity(), 5);
-
-        let arr: Vec<i64> = Vec::with_size(5);
+    fn test_one_dim() {
+        let arr: Vec<f64> = Vec::one_dim(5);
         assert_eq!(arr.capacity(), 5);
     }
 
+    #[test]
+    fn test_two_dim() {
+        let arr: Vec<Vec<f64>> = Vec::two_dim(5, 5);
+        assert_eq!(arr.capacity(), 5);
+        for i in 0..5 {
+            assert_eq!(arr[i].capacity(), 5);
+        }
+    }
 
     #[test]
-    fn test_with_shape() {
-        let arr1: Vec<Vec<i32>> = Vec::with_shape(&[5, 5]);
-        assert_eq!(arr1.capacity(), 5);
+    fn test_three_dim() {
+        let arr: Vec<Vec<Vec<f64>>> = Vec::three_dim(5, 5, 5);
+        assert_eq!(arr.capacity(), 5);
         for i in 0..5 {
-            assert_eq!(arr1[i].capacity(), 5);
+            assert_eq!(arr[i].capacity(), 5);
+            for j in 0..5 {
+                assert_eq!(arr[i][j].capacity(), 5);
+            }
         }
+    }
 
-        let arr2: Vec<Vec<u64>> = Vec::with_shape(&[5, 10]);
-        assert_eq!(arr2.capacity(), 5);
+    #[test]
+    fn test_four_dim() {
+        let arr: Vec<Vec<Vec<Vec<f64>>>> = Vec::four_dim(5, 5, 5, 5);
+        assert_eq!(arr.capacity(), 5);
         for i in 0..5 {
-            assert_eq!(arr2[i].capacity(), 10);
+            assert_eq!(arr[i].capacity(), 5);
+            for j in 0..5 {
+                assert_eq!(arr[i][j].capacity(), 5);
+                for k in 0..5 {
+                    assert_eq!(arr[i][j][k].capacity(), 5);
+                }
+            }
         }
     }
 
     #[test]
     fn test_fill() {
         // 1D array
-        let arr1: Vec<i32> = Vec::with_size(5).fill(0);
+        let arr1: Vec<i32> = Vec::one_dim(5).fill(0);
         assert_eq!(arr1, vec![0, 0, 0, 0, 0]);
 
-        let arr2: Vec<Vec<f64>> = Vec::with_shape(&[2, 2]).fill(5.0);
+        let arr2: Vec<Vec<f64>> = Vec::two_dim(2, 2).fill(5.0);
         assert_eq!(arr2, vec![
             vec![5.0, 5.0],
             vec![5.0, 5.0],
