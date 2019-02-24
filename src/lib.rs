@@ -80,12 +80,14 @@ impl<T> FourDimensional<T> for Vec<Vec<Vec<Vec<T>>>> where T: Num + Copy {
 }
 
 
-trait Fill<T> where T: Num + Copy {
-    fn fill(&mut self, value: T) -> Self;
+trait Full<T> where T: Num + Copy {
+    // Return a new array of given shape and type, filled with `value`.
+    fn full(&mut self, value: T) -> Self;
 }
 
-impl<T> Fill<T> for Vec<T> where T: Num + Copy {
-    fn fill(&mut self, value: T) -> Vec<T> {
+impl<T> Full<T> for Vec<T> where T: Num + Copy {
+    // Return a new 1D array of given shape and type, filled with `value`.
+    fn full(&mut self, value: T) -> Vec<T> {
         for _ in 0..self.capacity() {
             self.push(value);
         }
@@ -93,8 +95,9 @@ impl<T> Fill<T> for Vec<T> where T: Num + Copy {
     }
 }
 
-impl<T> Fill<T> for Vec<Vec<T>> where T: Num + Copy {
-    fn fill(&mut self, value: T) -> Vec<Vec<T>> {
+impl<T> Full<T> for Vec<Vec<T>> where T: Num + Copy {
+    // Return a new 2D array of given shape and type, filled with `value`.
+    fn full(&mut self, value: T) -> Vec<Vec<T>> {
         for i in 0..self.capacity() {
             for _ in 0..self[i].capacity() {
                 self[i].push(value);
@@ -103,6 +106,69 @@ impl<T> Fill<T> for Vec<Vec<T>> where T: Num + Copy {
         self.to_vec()
     }
 }
+
+
+impl<T> Full<T> for Vec<Vec<Vec<T>>> where T: Num + Copy {
+    // Return a new 3D array of given shape and type, filled with `value`.
+    fn full(&mut self, value: T) -> Vec<Vec<Vec<T>>> {
+        for i in 0..self.capacity() {
+            for j in 0..self[i].capacity() {
+                for _ in 0..self[i][j].capacity() {
+                    self[i][j].push(value);
+                }
+            }
+        }
+        self.to_vec()
+    }
+}
+
+
+impl<T> Full<T> for Vec<Vec<Vec<Vec<T>>>> where T: Num + Copy {
+    // Return a new 4D array of given shape and type, filled with `value`.
+    fn full(&mut self, value: T) -> Vec<Vec<Vec<Vec<T>>>> {
+        for i in 0..self.capacity() {
+            for j in 0..self[i].capacity() {
+                for k in 0..self[i][j].capacity() {
+                    for _ in 0..self[i][j][k].capacity() {
+                        self[i][j][k].push(value);
+                    }
+                }
+            }
+        }
+        self.to_vec()
+    }
+}
+
+trait Zero {
+    fn zeros(&mut self) -> Self;
+}
+
+impl Zero for Vec<i32> {
+    fn zeros(&mut self) -> Vec<i32> {
+        self.full(0)
+    }
+}
+
+impl Zero for Vec<i64> {
+    fn zeros(&mut self) -> Vec<i64> {
+        self.full(0)
+    }
+}
+
+
+impl Zero for Vec<f32> {
+    fn zeros(&mut self) -> Vec<f32> {
+        self.full(0.0)
+    }
+}
+
+impl Zero for Vec<f64> {
+    fn zeros(&mut self) -> Vec<f64> {
+        self.full(0.0)
+    }
+}
+
+
 
 
 #[cfg(test)]
@@ -120,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_one_dim() {
-        let arr: Vec<f64> = Vec::one_dim(5);
+        let arr: Vec<i64> = Vec::one_dim(5);
         assert_eq!(arr.capacity(), 5);
     }
 
@@ -147,6 +213,7 @@ mod tests {
 
     #[test]
     fn test_four_dim() {
+        // TODO: Look at numpy array
         let arr: Vec<Vec<Vec<Vec<f64>>>> = Vec::four_dim(5, 5, 5, 5);
         assert_eq!(arr.capacity(), 5);
         for i in 0..5 {
@@ -161,15 +228,64 @@ mod tests {
     }
 
     #[test]
-    fn test_fill() {
+    fn test_full_one_dim() {
         // 1D array
-        let arr1: Vec<i32> = Vec::one_dim(5).fill(0);
+        let arr1: Vec<i32> = Vec::one_dim(5).full(0);
         assert_eq!(arr1, vec![0, 0, 0, 0, 0]);
+    }
 
-        let arr2: Vec<Vec<f64>> = Vec::two_dim(2, 2).fill(5.0);
+    #[test]
+    fn test_full_two_dim() {
+        let arr2: Vec<Vec<f64>> = Vec::two_dim(2, 2).full(5.0);
         assert_eq!(arr2, vec![
             vec![5.0, 5.0],
             vec![5.0, 5.0],
         ]);
+    }
+
+    #[test]
+    fn test_full_three_dim() {
+        let arr3: Vec<Vec<Vec<f64>>> = Vec::three_dim(2, 2, 2).full(5.0);
+        assert_eq!(arr3,
+            vec![
+                vec![
+                    vec![5.0, 5.0],
+                    vec![5.0, 5.0],
+                ],
+                vec![
+                    vec![5.0, 5.0],
+                    vec![5.0, 5.0],
+                ],
+            ]
+        );
+    }
+
+    #[test]
+    fn test_full_four_dim() {
+        let arr4: Vec<Vec<Vec<Vec<f64>>>> = Vec::four_dim(2, 2, 2, 2).full(5.0);
+        assert_eq!(arr4,
+            vec![
+                vec![
+                    vec![
+                        vec![5.0, 5.0],
+                        vec![5.0, 5.0],
+                    ],
+                    vec![
+                        vec![5.0, 5.0],
+                        vec![5.0, 5.0],
+                    ],
+                ],
+                vec![
+                    vec![
+                        vec![5.0, 5.0],
+                        vec![5.0, 5.0],
+                    ],
+                    vec![
+                        vec![5.0, 5.0],
+                        vec![5.0, 5.0],
+                    ],
+                ],
+            ]
+        );
     }
 }
