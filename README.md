@@ -1,5 +1,5 @@
 # np
-`np` is the fundamental package for scientific computing with Rust.
+`np` is a [NumPy](http://www.numpy.org/)-like package in Rust.
 It contains among other things:
 
 - a powerful N-dimensional array routines
