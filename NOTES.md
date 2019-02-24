@@ -53,4 +53,9 @@ let a: Vec<Vec<i64>> = Vec::two_dim(x, y)
 
 It clearly says, initialize 2D vector. Oke, Nice!
 
+# Developer Experience first
+I think we already got the basics, we need to follow numpy docs
+first before continue adding new feature.
 
+Read the Numpy docs -> Modify the docs for `np` -> Write
+and example.
