@@ -3,3 +3,6 @@
 Cargo.lock
 
 *.log
+
+.vscode
+.DS_Store
