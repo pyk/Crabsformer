@@ -59,3 +59,39 @@ first before continue adding new feature.
 
 Read the Numpy docs -> Modify the docs for `np` -> Write
 and example.
+
+# Store N-Dimensional Array as One array
+Btw, we can store n-dimensional array as one array.
+
+> More generally, in a k-dimensional array, the address of an
+> element with indices i1, i2, ..., ik is
+>
+> B + c1 · i1 + c2 · i2 + ... + ck · ik.
+>
+
+From [wikipedia](https://en.wikipedia.org/wiki/Array_data_structure#Multidimensional_arrays)
+
+If we build something like that, we can access the data using `arr[i][j][k]`
+syntax right? I don't know let's try.
+
+We stuck on this
+
+    impl<T> Index<usize> for Array<T> {
+        type Output = T;
+
+        fn index(&self, index: usize) -> &T {
+            &self.data[index]
+            // Index::index(&*self, index)
+        }
+    }
+
+How to implement the `[i][j]` part? if we returns the element
+then we can't do reindex. What we need is:
+
+    dimension -> syntax -> expected returns type
+    if ndim == 1 -> arr[i] -> T
+    if ndim == 2 -> arr[i] -> Arrray<T>
+    if ndim == 2 -> arr[i][j] -> T
+    if ndim == 3 -> arr[i] -> Arrray<T>
+    if ndim == 3 -> arr[i][j] -> Arrray<T>
+    if ndim == 3 -> arr[i][j][k] -> T

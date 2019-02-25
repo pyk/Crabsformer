@@ -19,6 +19,8 @@
 extern crate num;
 
 use num::Num;
+use std::ops::Index;
+use std::slice::SliceIndex;
 
 
 pub fn zeros(shape: [usize; 2]) -> Vec<Vec<i64>> {
@@ -33,6 +35,23 @@ pub fn zeros(shape: [usize; 2]) -> Vec<Vec<i64>> {
     rows
 }
 
+struct Array<T> {
+    ndim: usize,
+    shape: Vec<usize>,
+    data: Vec<T>
+}
+
+impl<T> Index<usize> for Array<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &T {
+        &self.data[index]
+        // Index::index(&*self, index)
+    }
+}
+
+
+
 /// One-dimensional vectors
 pub trait OneDimensional<T> where T: Num + Copy {
     /// Returns new one-dimensional vector with specified `size`.
@@ -45,6 +64,44 @@ impl<T> OneDimensional<T> for Vec<T> where T: Num + Copy {
         Vec::with_capacity(size)
     }
 }
+
+/// One-dimensional vectors
+pub trait OneDimensionalArray<T> where T: Num + Copy {
+    /// Returns new one-dimensional vector with specified `size`.
+    // TODO(pyk): Add example
+    fn one_dim_array(size: usize) -> Self;
+}
+
+impl<T> OneDimensionalArray<T> for Array<T> where T: Num + Copy {
+    fn one_dim_array(size: usize) -> Array<T> {
+        Array {
+            ndim: 1,
+            shape: vec![size],
+            data: Vec::with_capacity(size)
+        }
+    }
+}
+
+
+/// Two-dimensional vectors
+pub trait TwoDimensionalArray<T> where T: Num + Copy {
+    /// Returns new two-dimensional vector with specified
+    /// number of rows and number of columns.
+    ///
+    // TODO(pyk): Add example
+    fn two_dim_array(nrows: usize, ncols: usize) -> Self;
+}
+
+impl<T> TwoDimensionalArray<T> for Array<T> where T: Num + Copy {
+    fn two_dim_array(nrows: usize, ncols: usize) -> Array<T> {
+        Array {
+            ndim: 2,
+            shape: vec![nrows, ncols],
+            data: Vec::new()
+        }
+    }
+}
+
 
 /// Two-dimensional vectors
 pub trait TwoDimensional<T> where T: Num + Copy {
@@ -184,6 +241,28 @@ impl<T> Full<T> for Vec<Vec<Vec<Vec<T>>>> where T: Num + Copy {
             }
         }
         self.to_vec()
+    }
+}
+
+/// Fillable vectors
+pub trait FullArray<T> where T: Num + Copy {
+    /// Returns a new array of given shape and type, filled with `value`.
+    fn full_array(self, value: T) -> Self;
+}
+
+impl<T> FullArray<T> for Array<T> where T: Num + Copy {
+    fn full_array(self, value: T) -> Array<T> {
+        // Create new Array with new value
+        let capacity = self.shape.iter().product();
+        let mut new_data = Vec::with_capacity(capacity);
+        for _ in 0..new_data.capacity() {
+            new_data.push(value);
+        }
+        Array {
+            shape: self.shape,
+            ndim: self.ndim,
+            data: new_data
+        }
     }
 }
 
@@ -483,6 +562,21 @@ impl Zero for Vec<Vec<Vec<Vec<f64>>>> {
         self.full(0.0)
     }
 }
+
+
+/// A zero-able vectors
+pub trait ZeroArray {
+    /// Return a new vector of given data type and shape,
+    /// filled with zeros.
+    fn zeros_array(self) -> Self;
+}
+
+impl ZeroArray for Array<i32> {
+    fn zeros_array(self) -> Array<i32> {
+        self.full_array(0)
+    }
+}
+
 
 
 #[cfg(test)]
@@ -852,5 +946,53 @@ mod tests {
     fn test_zeros_f64_four_dim() {
         let arr: Vec<Vec<Vec<Vec<f64>>>> = Vec::four_dim(1, 1, 1, 2).zeros();
         assert_eq!(arr, vec![vec![vec![vec![0.0, 0.0]]]]);
+    }
+
+    #[test]
+    fn test_array_one_dim() {
+        let arr: Array<i32> = Array::one_dim_array(5);
+        assert_eq!(arr.ndim, 1);
+        assert_eq!(arr.shape, [5]);
+    }
+
+    #[test]
+    fn test_array_one_dim_zeros() {
+        let arr: Array<i32> = Array::one_dim_array(5).zeros_array();
+        assert_eq!(arr.ndim, 1);
+        assert_eq!(arr.shape, [5]);
+        assert_eq!(arr.data, [0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_array_one_dim_zeros_index() {
+        let arr: Array<i32> = Array::one_dim_array(5).zeros_array();
+        for i in 0..5 {
+            assert_eq!(arr[i], 0);
+        }
+    }
+
+    #[test]
+    fn test_array_two_dim() {
+        let arr: Array<i32> = Array::two_dim_array(5, 5);
+        assert_eq!(arr.ndim, 2);
+        assert_eq!(arr.shape, [5, 5]);
+    }
+
+    #[test]
+    fn test_array_two_dim_zeros() {
+        let arr: Array<i32> = Array::two_dim_array(2, 2).zeros_array();
+        assert_eq!(arr.ndim, 2);
+        assert_eq!(arr.shape, [2, 2]);
+        assert_eq!(arr.data, [0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_array_two_dim_zeros_index() {
+        let arr: Array<i32> = Array::two_dim_array(2, 2).zeros_array();
+        for i in 0..2 {
+            for j in 0..2 {
+                assert_eq!(arr[i][j], 0);
+            }
+        }
     }
 }
