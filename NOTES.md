@@ -95,3 +95,9 @@ then we can't do reindex. What we need is:
     if ndim == 3 -> arr[i] -> Arrray<T>
     if ndim == 3 -> arr[i][j] -> Arrray<T>
     if ndim == 3 -> arr[i][j][k] -> T
+
+Btw berarti kalo mau `arr[i][j]` berarti `Array<Array<T>>` dong ya?
+bener juga hmmm ...
+
+nah yg tak pengen dia tetep `Array<T>` si.
+
