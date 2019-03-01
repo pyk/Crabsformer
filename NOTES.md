@@ -101,3 +101,14 @@ bener juga hmmm ...
 
 nah yg tak pengen dia tetep `Array<T>` si.
 
+
+# Rust Module
+Btw, we can move the vector builder to it's own module: `builder`.
+
+Example of code the structure: [rand]
+
+[rand]: https://github.com/rust-random/rand/tree/master/src
+
+and we can split the builder into their own file like: `zeros.rs`,
+`ones.rs`, `full.rs` and so on. We will add the test on each file
+like the following.
