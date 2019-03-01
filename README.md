@@ -1,10 +1,11 @@
 # np
-`np` is the fundamental package for scientific computing with Rust,
-highly inspired by [NumPy](http://www.numpy.org/).
+`np` is an easy-to-use fundamental library for scientific computing with Rust,
+highly inspired by [NumPy].
 
+[NumPy]: http://www.numpy.org/
 
 ### Usage
-Add this to your Cargo.toml:
+Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]

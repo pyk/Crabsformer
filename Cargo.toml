@@ -1,6 +1,6 @@
 [package]
 name = "np"
-description = "Numpy-like package in Rust"
+description = "np is an easy-to-use fundamental library for scientific computing with Rust, highly inspired by NumPy."
 license = "BSD-3-Clause"
 version = "0.1.2"
 authors = ["Bayu Aldi Yansyah <bayualdiyansyah@gmail.com>"]
