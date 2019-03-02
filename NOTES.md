@@ -112,3 +112,40 @@ Example of code the structure: [rand]
 and we can split the builder into their own file like: `zeros.rs`,
 `ones.rs`, `full.rs` and so on. We will add the test on each file
 like the following.
+
+# Rename the project to Gibbs
+
+Gibbs is named after [Josiah Willard Gibbs](https://www.britannica.com/science/vector-mathematics).
+
+Hmmmmmmm
+
+The name is very confusing:
+[https://www.google.com/search?q=Gibbs](https://www.google.com/search?q=Gibbs).
+
+I think it's not appropriate to use that name. Let's brainstorming first:
+
+```
+vector
+multidimensional
+vector extension
+VectorX
+```
+
+Anw we can use [name generator](https://namelix.com/app/?keywords=science+vector+operations)
+wkwk.
+
+```
+vectwise
+hivector
+solvect
+savec
+wavec
+covect
+solvecto
+covecto
+eigenic
+```
+
+fuk ternyata susah banget cari nama ASW.
+udah ah np aja. tai.
+
