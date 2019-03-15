@@ -2,13 +2,15 @@
 name = "crabsformer"
 description = "Crabsformer is an easy-to-use fundamental library for scientific computing with Rust, highly inspired by NumPy."
 license = "Apache-2.0"
-version = "2019.3.8"
+version = "2019.3.9"
 authors = ["Bayu Aldi Yansyah <bayualdiyansyah@gmail.com>"]
 edition = "2018"
 documentation = "https://docs.rs/crabsformer/"
 homepage = "https://github.com/pyk/crabsformer"
 repository = "https://github.com/pyk/crabsformer"
 readme = "README.md"
+categories = ["science"]
 
 [dependencies]
 num = "0.2"
+rand = "0.6.5"
