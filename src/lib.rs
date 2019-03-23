@@ -22,7 +22,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! crabsformer = "2019.3.13"
+//! crabsformer = "2019.3.14"
 //! ```
 //!
 //! and this to your crate root:
@@ -270,15 +270,19 @@
 //! # fn main() {
 //! let x = vector![3, 1, 4, 1];
 //!
-//! // Indexing
+//! // Indexing numeric vector
 //! assert_eq!(x[0], 3);
 //! assert_eq!(x[2], 4);
 //!
-//! // Slicing
+//! // Slicing numeric vector
 //! assert_eq!(x.slice(0..2), vector![3, 1]);
 //! assert_eq!(x.slice(2..), vector![4, 1]);
 //! assert_eq!(x.slice(..2), vector![3, 1]);
 //!
+//! // Iterating over element of numeric vector
+//! for element in x.into_iter() {
+//!     println!("element = {:?}", element);
+//! }
 //! # }
 //! ```
 //!
