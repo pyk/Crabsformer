@@ -15,6 +15,8 @@
 //! Crabsformer is an easy-to-use fundamental library for scientific computing with
 //! Rust, highly inspired by [NumPy].
 //!
+//! **Notice!** This project is in early phase. Expect bugs and missing features.
+//!
 //! [NumPy]: http://www.numpy.org/
 //!
 //! # Usage
@@ -22,7 +24,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! crabsformer = "2019.3.16"
+//! crabsformer = "2019.3.17"
 //! ```
 //!
 //! and this to your crate root:
@@ -435,6 +437,11 @@
 //! cannot add `matrix::Matrix<{integer}>` to `matrix::Matrix<{float}>`
 //! ```
 //!
+//! ---
+//! TODO(pyk): Continue quick tutorial here
+//!
+//! ---
+//!
 //! [numeric type]: https://doc.rust-lang.org/reference/types/numeric.html
 //! [pyk]: https://github.com/pyk
 //!
@@ -458,6 +465,9 @@
 mod matrix;
 #[macro_use]
 mod vector;
+mod error;
+mod utils;
 
+pub use error::*;
 pub use matrix::*;
 pub use vector::*;
