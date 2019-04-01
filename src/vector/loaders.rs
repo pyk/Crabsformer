@@ -12,11 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crabsformer::*;
-
-#[test]
-fn test_from() {
-    let x = vec![vec![1, 2, 3], vec![1, 2, 3]];
-    let m = Matrix::from(x);
-    assert_eq!(m.shape(), [2, 3]);
-}
+//! Loads numeric vector from a file.
+//!
+//! TODO(pyk): Add docs here
+//!
+//!

@@ -12,96 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::error::{LoadError, LoadErrorKind};
-use crate::slice::*;
-use crate::utils;
-use crate::vector;
-use csv;
-use num::{FromPrimitive, Num};
-use rand::distributions::uniform::SampleUniform;
-use rand::distributions::{Distribution, Normal, Uniform};
-use std::fs::File;
-use std::marker::PhantomData;
-use std::ops;
-use std::path::Path;
+//! Matrix
+//!
+//! TODO(pyk): Add docs here
+//!
 
-/// Creates a [matrix] containing the arguments.
-///
-/// `matrix!` allows matrix to be defined with
-/// the same syntax as array expressions.
-///
-/// There are two forms of this macro:
-///
-/// 1. Create a matrix containing a given list of elements:
-///
-/// ```
-/// # use crabsformer::*;
-/// let w = matrix![
-///     3, 1, 4;
-///     1, 5, 9;
-/// ];
-/// assert_eq!(w[0][0], 3);
-/// assert_eq!(w[0][1], 1);
-/// assert_eq!(w[0][2], 4);
-/// assert_eq!(w[1][0], 1);
-/// assert_eq!(w[1][1], 5);
-/// assert_eq!(w[1][2], 9);
-/// ```
-///
-/// 2. Create a matrix from a given shape and element:
-///
-/// ```
-/// # use crabsformer::*;
-/// let w = matrix![[3, 3] => 1];
-/// assert_eq!(w, matrix![
-///     1, 1, 1;
-///     1, 1, 1;
-///     1, 1, 1;
-/// ]);
-/// ```
-///
-/// [matrix]: struct.Matrix.html
-#[macro_export]
-macro_rules! matrix {
-    // NOTE: the order of the rules is very important
+use crate::vector::*;
+use num::Num;
+use std::fmt;
 
-    // Samples: matrix![[3, 3] => 0]
-    ($shape:expr => $elem:expr) => {{
-        let nrows = $shape[0];
-        let ncols = $shape[1];
-        let elements = vec![vec![$elem; ncols]; nrows];
-        $crate::Matrix::from(elements)
-    }};
-
-    // Samples: matrix![1, 3, 4]
-    ($($x:expr),*) => {{
-        let elements = vec![vec![$($x),*]];
-        $crate::Matrix::from(elements)
-    }};
-
-    // Samples: matrix![1, 2, 3, 4,]
-    ($($x:expr,)*) => {{
-        let elements = vec![vec![$($x),*]];
-        Matrix::from(elements)
-    }};
-
-    // Samples: matrix![2.0, 1.0, 4.0; 2.0, 4.0, 2.0;]
-    ($($($x:expr),*;)*) => {{
-        let elements = vec![$(vec![$($x),*]),*];
-        Matrix::from(elements)
-    }};
-
-    // Samples: matrix![2.0, 1.0, 4.0; 2.0, 4.0, 2.0]
-    ($($($x:expr),*);*) => {{
-        let elements = vec![$(vec![$($x),*]),*];
-        Matrix::from(elements)
-    }};
-}
-
-/// Row & Column Matrix
-/// https://en.wikipedia.org/wiki/Row_and_column_vectors
-type RowMatrix<T> = vector::Vector<T>;
-// type ColMatrix<T> = vector::Vector<T>;
+// Import all sub modules
+pub mod builders;
+pub mod indexing;
+pub mod iterators;
+pub mod loaders;
+pub mod operations;
+pub mod slicing;
 
 /// Matrix.
 ///
@@ -109,269 +35,35 @@ type RowMatrix<T> = vector::Vector<T>;
 /// 1. how to create a matrix
 /// 2. Matrix operation
 /// 3. Indexing, etc.
-#[derive(Debug)]
-pub struct Matrix<T> {
+pub struct Matrix<T>
+where
+    T: Num + Copy,
+{
     /// Matrix size
     nrows: usize,
     ncols: usize,
-    elements: Vec<RowMatrix<T>>,
+    vec: Vector<T>,
 }
 
-impl<T> Matrix<T> {
+impl<T> Matrix<T>
+where
+    T: Num + Copy,
+{
     /// The shape of the matrix `[nrows, ncols]`.
     ///
     /// # Examples
     ///
     /// ```
     /// # use crabsformer::*;
-    /// let W = matrix![
+    /// let w = matrix![
     ///     3.0, 1.0;
     ///     4.0, 1.0;
     ///     5.0, 9.0;
     /// ];
-    /// assert_eq!(W.shape(), [3, 2]);
+    /// assert_eq!(w.shape(), [3, 2]);
     /// ```
     pub fn shape(&self) -> [usize; 2] {
         [self.nrows, self.ncols]
-    }
-
-    /// Create a new matrix of given shape `shape` and type `T`,
-    /// filled with `value`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W = Matrix::full([5, 5], 2.5);
-    /// ```
-    pub fn full(shape: [usize; 2], value: T) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        // Initialize and populate the matrix with specified value
-        let nrows = shape[0];
-        let ncols = shape[1];
-        let elements = vec![vector![value; ncols]; nrows];
-        Matrix {
-            nrows,
-            ncols,
-            elements,
-        }
-    }
-
-    /// Create a new matrix that have the same shape and type
-    /// as matrix `m`, filled with `value`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let w1 = matrix![
-    ///     3.0, 1.0;
-    ///     4.0, 1.0;
-    /// ];
-    /// let w2 = Matrix::full_like(&w1, 3.1415);
-    /// ```
-    pub fn full_like(m: &Matrix<T>, value: T) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        // Initialize and populate the matrix with specified value
-        let nrows = m.nrows;
-        let ncols = m.ncols;
-        let elements = vec![vector![value; ncols]; nrows];
-        Matrix {
-            nrows,
-            ncols,
-            elements,
-        }
-    }
-
-    /// Create a new matrix of given shape `shape` and type `T`,
-    /// filled with zeros. You need to explicitly annotate the
-    /// numeric type.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W: Matrix<i32> = Matrix::zeros([5, 5]);
-    /// ```
-    pub fn zeros(shape: [usize; 2]) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        Self::full(shape, T::from_i32(0).unwrap())
-    }
-
-    /// Create a new matrix that have the same shape and type
-    /// as matrix `m`, filled with zeros.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W1 = matrix![3.0, 1.0; 4.0, 1.0];
-    /// let W2 = Matrix::zeros_like(&W1);
-    /// ```
-    pub fn zeros_like(m: &Matrix<T>) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        Self::full([m.nrows, m.ncols], T::from_i32(0).unwrap())
-    }
-
-    /// Create a new matrix of given shaoe `shape` and type `T`,
-    /// filled with ones. You need to explicitly annotate the
-    /// numeric type.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W: Matrix<i32> = Matrix::ones([3, 5]);
-    /// ```
-    pub fn ones(shape: [usize; 2]) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        Self::full(shape, T::from_i32(1).unwrap())
-    }
-
-    /// Create a new matrix that have the same shape and type
-    /// as matrix `m`, filled with ones.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W1 = matrix![3, 1; 4, 1; 5, 9];
-    /// let W2 = Matrix::ones_like(&W1);
-    /// ```
-    pub fn ones_like(m: &Matrix<T>) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        Self::full([m.nrows, m.ncols], T::from_i32(1).unwrap())
-    }
-
-    /// Raises each elements of matrix to the power of `exp`,
-    /// using exponentiation by squaring.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W1 = matrix![3, 1, 4; 1, 5, 9];
-    /// let W2 = W1.power(2);
-    /// assert_eq!(W2, matrix![9, 1, 16; 1, 25, 81]);
-    /// ```
-    pub fn power(&self, exp: usize) -> Matrix<T>
-    where
-        T: FromPrimitive + Num + Copy,
-    {
-        let elements =
-            self.elements.iter().map(|row| row.power(exp)).collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
-        }
-    }
-
-    /// Create a new matrix of the given shape `shape` and
-    /// populate it with random samples from a uniform distribution
-    /// over the half-open interval `[low, high)` (includes `low`,
-    /// but excludes `high`).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W = Matrix::uniform([5, 5], 0.0, 1.0);
-    /// ```
-    pub fn uniform(shape: [usize; 2], low: T, high: T) -> Matrix<T>
-    where
-        T: Num + SampleUniform + Copy,
-    {
-        // Get the shape of the matrix
-        let nrows = shape[0];
-        let ncols = shape[1];
-
-        let mut elements = Vec::with_capacity(nrows);
-        let uniform_distribution = Uniform::new(low, high);
-        // Populate the Matrix with the default value
-        let mut rng = rand::thread_rng();
-        for _ in 0..nrows {
-            let mut cols = Vec::with_capacity(ncols);
-            for _ in 0..ncols {
-                cols.push(uniform_distribution.sample(&mut rng));
-            }
-            elements.push(RowMatrix::from(cols));
-        }
-
-        Matrix {
-            nrows,
-            ncols,
-            elements,
-        }
-    }
-
-    /// Load Matrix from CSV file. You need to explicitly annotate the numeric type.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crabsformer::*;
-    ///
-    /// let dataset: Matrix<f32> = Matrix::from_csv("tests/weight.csv").load().unwrap();
-    /// ```
-    ///
-    pub fn from_csv<P>(file_path: P) -> MatrixLoaderForCSV<T, P>
-    where
-        P: AsRef<Path>,
-    {
-        MatrixLoaderForCSV {
-            file_path,
-            has_headers: false,
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl Matrix<f64> {
-    /// Create a new matrix of the given shape `shape` and
-    /// populate it with random samples from a normal distribution
-    /// `N(mean, std_dev**2)`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::*;
-    /// let W = Matrix::normal([5, 5], 0.0, 1.0); // Gaussian mean=0.0 std_dev=1.0
-    /// ```
-    pub fn normal(shape: [usize; 2], mean: f64, std_dev: f64) -> Matrix<f64> {
-        // Get the shape of the matrix
-        let nrows = shape[0];
-        let ncols = shape[1];
-
-        let mut elements = Vec::with_capacity(nrows);
-        let normal_distribution = Normal::new(mean, std_dev);
-        // Populate the Matrix with the default value
-        let mut rng = rand::thread_rng();
-        for _ in 0..nrows {
-            let mut cols = Vec::with_capacity(ncols);
-            for _ in 0..ncols {
-                cols.push(normal_distribution.sample(&mut rng));
-            }
-            elements.push(RowMatrix::from(cols));
-        }
-
-        Matrix {
-            nrows,
-            ncols,
-            elements,
-        }
     }
 }
 
@@ -388,905 +80,355 @@ where
         if ncols_inconsistent {
             panic!("Invalid matrix: the number of columns is inconsistent")
         }
-        // Convert each row to RowMatrix
-        let elements = source
-            .iter()
-            .map(|v| {
-                // We cannot directly convert &Vec<T>
-                // to RowMatrix<T> because we cannot
-                // move out borrowed content
-                let mut row = Vec::new();
-                v.iter().for_each(|x| row.push(*x));
-                RowMatrix::from(row)
-            })
-            .collect();
+        // Flatten the vector
+        let vec = source.into_iter().flatten().collect();
 
-        Matrix {
-            nrows,
-            ncols,
-            elements,
-        }
+        Matrix { nrows, ncols, vec }
     }
 }
 
-// Conversion from Vec<Vector<T>>
-impl<T> From<Vec<vector::Vector<T>>> for Matrix<T>
+impl<T> fmt::Debug for Matrix<T>
 where
-    T: Num + Copy,
+    T: Num + Copy + fmt::Debug + ToString,
 {
-    fn from(source: Vec<vector::Vector<T>>) -> Self {
-        let nrows = source.len();
-        let ncols = source[0].len();
-        // Raise panic if number of columns on each row is inconsistent
-        let ncols_inconsistent = source.iter().any(|v| v.len() != ncols);
-        if ncols_inconsistent {
-            panic!("Invalid matrix: the number of columns is inconsistent")
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut output = String::from("[");
+        for (i, row) in self.rows().enumerate() {
+            let mut row_output = String::from("");
+            // add space to the next line
+            if i > 0 {
+                row_output += " ";
+            }
+            row_output += "[";
+            for (j, value) in row.elements().enumerate() {
+                row_output += &value.to_string();
+                // Don't add comma to the end of line
+                if j < self.ncols - 1 {
+                    row_output += ", ";
+                } else {
+                    row_output += "]";
+                }
+            }
+            // Don't add new line to the end of row
+            if i < self.ncols - 1 {
+                row_output += ",\n";
+            } else {
+                row_output += "]";
+            }
+            output += &row_output.to_string();
         }
 
-        Matrix {
-            nrows,
-            ncols,
-            elements: source,
-        }
+        write!(f, "{}", output)
     }
 }
 
 // Matrix comparison
+// Matrix is equal if the shape and content are the same.
 impl<T> PartialEq for Matrix<T>
 where
     T: Num + Copy,
 {
     fn eq(&self, other: &Matrix<T>) -> bool {
-        if self.elements != other.elements {
-            return false;
+        if self.shape() == other.shape() && self.vec == other.vec {
+            true
+        } else {
+            false
         }
-        true
     }
+
     fn ne(&self, other: &Matrix<T>) -> bool {
-        if self.elements == other.elements {
-            return false;
+        if self.shape() != self.shape() || self.vec != other.vec {
+            true
+        } else {
+            false
         }
-        true
     }
 }
 
-// Implement matrix indexing
-impl<T> ops::Index<usize> for Matrix<T> {
-    type Output = RowMatrix<T>;
+/// Row matrix is reference to a row of a matrix.
+///
+/// It is a `1xm` matrix where `m` is a number of columns.
+pub struct RowMatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    // Row position in the matrix
+    pos: usize,
+    // Offset from the start of the row; we use this
+    // to iterate over elements in the submatrix row
+    offset: usize,
+    // Row size
+    size: usize,
+    // Original matrix; where to get the elements from
+    source: &'a Matrix<T>,
+}
 
-    fn index(&self, i: usize) -> &RowMatrix<T> {
-        &self.elements[i]
+impl<'a, T> fmt::Debug for RowMatrix<'a, T>
+where
+    T: Num + Copy + fmt::Debug + ToString,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut output = String::from("[");
+        for (i, value) in self.elements().enumerate() {
+            output += &value.to_string();
+            // Don't add comma to the end of line
+            if i < self.size - 1 {
+                output += ", ";
+            }
+        }
+        output += "]";
+        write!(f, "{}", output)
     }
 }
 
-/// Implements sub-matrix slicing with syntax
-/// `w.slice(begin1 .. end1, begin2 .. end2)`.
-///
-/// Returns a new matrix that have elements of
-/// the given matrix from the row range [`begin1`..`end1`)
-/// and column range [`begin2`..`end2`).
-///
-/// This operation is `O(N)`, where `N` is the number of
-/// sliced rows.
-///
-/// # Panics
-/// Requires that `begin1 <= end1`, `begin2 <= end2`, `end1 <= nrows`
-/// and `end2 <= ncols` where `nrows` is the number of rows and `ncols`
-/// is the number of columns. Otherwise it will panic.
-///
-/// # Examples
-/// ```
-/// # use crabsformer::*;
-/// let w = matrix![
-///     3, 1, 4;
-///     1, 5, 9;
-/// ];
-///
-/// // (Range, Range)
-/// assert_eq!(w.slice(0..1, 0..1), matrix![3]);
-///
-/// // (Range, RangeTo)
-/// assert_eq!(w.slice(0..2, ..2), matrix![3, 1; 1, 5]);
-///
-/// // (Range, RangeFrom)
-/// assert_eq!(w.slice(0..2, 1..), matrix![1, 4; 5, 9]);
-///
-/// // (Range, RangeFull)
-/// assert_eq!(w.slice(0..2, ..), matrix![3, 1, 4; 1, 5, 9]);
-///
-/// // (Range, RangeInclusive)
-/// assert_eq!(w.slice(0..2, 0..=1), matrix![3, 1; 1, 5]);
-///
-/// // (Range, RangeToInclusive)
-/// assert_eq!(w.slice(0..2, ..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeTo, Range)
-/// assert_eq!(w.slice(..1, 0..1), matrix![3]);
-///
-/// // (RangeTo, RangeTo)
-/// assert_eq!(w.slice(..2, ..2), matrix![3, 1; 1, 5]);
-///
-/// // (RangeTo, RangeFrom)
-/// assert_eq!(w.slice(..2, 1..), matrix![1, 4; 5, 9]);
-///
-/// // (RangeTo, RangeFull)
-/// assert_eq!(w.slice(..2, ..), matrix![3, 1, 4; 1, 5, 9]);
-///
-/// // (RangeTo, RangeInclusive)
-/// assert_eq!(w.slice(..2, 0..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeTo, RangeToInclusive)
-/// assert_eq!(w.slice(..2, ..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeFrom, Range)
-/// assert_eq!(w.slice(0.., 0..1), matrix![3; 1]);
-///
-/// // (RangeFrom, RangeTo)
-/// assert_eq!(w.slice(0.., ..2), matrix![3, 1; 1, 5]);
-///
-/// // (RangeFrom, RangeFrom)
-/// assert_eq!(w.slice(0.., 1..), matrix![1, 4; 5, 9]);
-///
-/// // (RangeFrom, RangeFull)
-/// assert_eq!(w.slice(0.., ..), matrix![3, 1, 4; 1, 5, 9]);
-///
-/// // (RangeFrom, RangeInclusive)
-/// assert_eq!(w.slice(0.., 0..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeFrom, RangeToInclusive)
-/// assert_eq!(w.slice(0.., ..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeFull, Range)
-/// assert_eq!(w.slice(.., 0..1), matrix![3; 1]);
-///
-/// // (RangeFull, RangeTo)
-/// assert_eq!(w.slice(.., ..2), matrix![3, 1; 1, 5]);
-///
-/// // (RangeFull, RangeFrom)
-/// assert_eq!(w.slice(.., 1..), matrix![1, 4; 5, 9]);
-///
-/// // (RangeFull, RangeFull)
-/// assert_eq!(w.slice(.., ..), matrix![3, 1, 4; 1, 5, 9]);
-///
-/// // (RangeFull, RangeInclusive)
-/// assert_eq!(w.slice(.., 0..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeFull, RangeToInclusive)
-/// assert_eq!(w.slice(.., ..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeInclusive, Range)
-/// assert_eq!(w.slice(0..=1, 0..1), matrix![3; 1]);
-///
-/// // (RangeInclusive, RangeTo)
-/// assert_eq!(w.slice(0..=1, ..2), matrix![3, 1; 1, 5]);
-///
-/// // (RangeInclusive, RangeFrom)
-/// assert_eq!(w.slice(0..=1, 1..), matrix![1, 4; 5, 9]);
-///
-/// // (RangeInclusive, RangeFull)
-/// assert_eq!(w.slice(0..=1, ..), matrix![3, 1, 4; 1, 5, 9]);
-///
-/// // (RangeInclusive, RangeInclusive)
-/// assert_eq!(w.slice(0..=1, 0..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeInclusive, RangeToInclusive)
-/// assert_eq!(w.slice(0..=1, ..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeToInclusive, Range)
-/// assert_eq!(w.slice(..=1, 0..1), matrix![3; 1]);
-///
-/// // (RangeToInclusive, RangeTo)
-/// assert_eq!(w.slice(..=1, ..2), matrix![3, 1; 1, 5]);
-///
-/// // (RangeToInclusive, RangeFrom)
-/// assert_eq!(w.slice(..=1, 1..), matrix![1, 4; 5, 9]);
-///
-/// // (RangeToInclusive, RangeFull)
-/// assert_eq!(w.slice(..=1, ..), matrix![3, 1, 4; 1, 5, 9]);
-///
-/// // (RangeToInclusive, RangeInclusive)
-/// assert_eq!(w.slice(..=1, 0..=1), matrix![3, 1; 1, 5]);
-///
-/// // (RangeToInclusive, RangeToInclusive)
-/// assert_eq!(w.slice(..=1, ..=1), matrix![3, 1; 1, 5]);
-/// ```
-macro_rules! impl_slice_ops_with_range_combination {
-    ($row_i:ty, $col_i:ty) => {
-        impl<T> MatrixSlice<$row_i, $col_i> for Matrix<T>
-        where
-            T: Num + Copy,
+// Row matrix comparison
+// Row matrix is equal if the position, size and content are the same.
+impl<'a, T> PartialEq for RowMatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    fn eq(&self, other: &RowMatrix<'a, T>) -> bool {
+        if self.pos == other.pos
+            && self.size == other.size
+            && self.offset == other.offset
+            && self.source == other.source
         {
-            type Output = Matrix<T>;
-
-            fn slice(&self, i: $row_i, j: $col_i) -> Matrix<T> {
-                let sliced_elements = self.elements[i]
-                    .iter()
-                    .map(|row| row.slice(j.clone()))
-                    .collect::<Vec<RowMatrix<T>>>();
-                Matrix::from(sliced_elements)
-            }
+            true
+        } else {
+            false
         }
-    };
-}
-
-impl_slice_ops_with_range_combination!(ops::Range<usize>, ops::Range<usize>);
-impl_slice_ops_with_range_combination!(
-    ops::Range<usize>,
-    ops::RangeFrom<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::Range<usize>,
-    ops::RangeTo<usize>
-);
-impl_slice_ops_with_range_combination!(ops::Range<usize>, ops::RangeFull);
-impl_slice_ops_with_range_combination!(
-    ops::Range<usize>,
-    ops::RangeInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::Range<usize>,
-    ops::RangeToInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFrom<usize>,
-    ops::Range<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFrom<usize>,
-    ops::RangeFrom<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFrom<usize>,
-    ops::RangeTo<usize>
-);
-impl_slice_ops_with_range_combination!(ops::RangeFrom<usize>, ops::RangeFull);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFrom<usize>,
-    ops::RangeInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFrom<usize>,
-    ops::RangeToInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeTo<usize>,
-    ops::Range<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeTo<usize>,
-    ops::RangeFrom<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeTo<usize>,
-    ops::RangeTo<usize>
-);
-impl_slice_ops_with_range_combination!(ops::RangeTo<usize>, ops::RangeFull);
-impl_slice_ops_with_range_combination!(
-    ops::RangeTo<usize>,
-    ops::RangeInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeTo<usize>,
-    ops::RangeToInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(ops::RangeFull, ops::Range<usize>);
-impl_slice_ops_with_range_combination!(ops::RangeFull, ops::RangeFrom<usize>);
-impl_slice_ops_with_range_combination!(ops::RangeFull, ops::RangeTo<usize>);
-impl_slice_ops_with_range_combination!(ops::RangeFull, ops::RangeFull);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFull,
-    ops::RangeInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeFull,
-    ops::RangeToInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeInclusive<usize>,
-    ops::Range<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeInclusive<usize>,
-    ops::RangeFrom<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeInclusive<usize>,
-    ops::RangeTo<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeInclusive<usize>,
-    ops::RangeFull
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeInclusive<usize>,
-    ops::RangeInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeInclusive<usize>,
-    ops::RangeToInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeToInclusive<usize>,
-    ops::Range<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeToInclusive<usize>,
-    ops::RangeFrom<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeToInclusive<usize>,
-    ops::RangeTo<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeToInclusive<usize>,
-    ops::RangeFull
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeToInclusive<usize>,
-    ops::RangeInclusive<usize>
-);
-impl_slice_ops_with_range_combination!(
-    ops::RangeToInclusive<usize>,
-    ops::RangeToInclusive<usize>
-);
-
-// Implement iterator for matrix
-impl<T> IntoIterator for Matrix<T> {
-    type Item = RowMatrix<T>;
-    type IntoIter = ::std::vec::IntoIter<RowMatrix<T>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.elements.into_iter()
     }
-}
 
-// This trait is implemented to support for matrix addition operator
-impl<T> ops::Add<Matrix<T>> for Matrix<T>
-where
-    T: Num + Copy,
-{
-    type Output = Matrix<T>;
-
-    fn add(self, other: Matrix<T>) -> Matrix<T> {
-        if self.shape() != other.shape() {
-            panic!(
-                "Matrix addition with invalid shape: {:?} != {:?}",
-                self.shape(),
-                other.shape()
-            );
-        }
-
-        // Add the matrix
-        let elements = self
-            .elements
-            .iter()
-            .enumerate()
-            .map(|(i, row)| {
-                row.elements
-                    .iter()
-                    .enumerate()
-                    .map(|(j, value)| *value + other[i][j])
-                    .collect()
-            })
-            .collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
+    fn ne(&self, other: &RowMatrix<'a, T>) -> bool {
+        if self.pos != other.pos
+            || self.size != other.size
+            || self.offset != other.offset
+            || self.source != other.source
+        {
+            true
+        } else {
+            false
         }
     }
 }
 
-// This trait is implemented to support for matrix addition
-// operator with scalar on the right side,
-// for example:
-//
-// let a = matrix![5, 5; 5, 5] + 6;
-//
-impl<T> ops::Add<T> for Matrix<T>
-where
-    T: Num + Copy,
-{
-    type Output = Matrix<T>;
-
-    fn add(self, value: T) -> Matrix<T> {
-        // Add the matrix
-        let elements = self
-            .elements
-            .iter()
-            .map(|row| {
-                row.elements.iter().map(|elem| *elem + value).collect()
-            })
-            .collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
-        }
-    }
-}
-
-// This macro is to generate support for matrix addition
-// operator with scalar on the left side,
-// for example:
-//
-// let a = 6 + matrix![5, 5; 5, 5];
-//
-macro_rules! impl_add_matrix_for_type {
-    ($t: ty) => {
-        impl ops::Add<Matrix<$t>> for $t {
-            type Output = Matrix<$t>;
-
-            fn add(self, m: Matrix<$t>) -> Matrix<$t> {
-                // Add the matrix
-                let elements = m
-                    .elements
-                    .iter()
-                    .map(|row| {
-                        row.elements.iter().map(|elem| elem + self).collect()
-                    })
-                    .collect();
-                Matrix {
-                    nrows: m.nrows,
-                    ncols: m.ncols,
-                    elements,
-                }
-            }
-        }
-    };
-}
-
-impl_add_matrix_for_type!(usize);
-impl_add_matrix_for_type!(i8);
-impl_add_matrix_for_type!(i16);
-impl_add_matrix_for_type!(i32);
-impl_add_matrix_for_type!(i64);
-impl_add_matrix_for_type!(i128);
-impl_add_matrix_for_type!(u8);
-impl_add_matrix_for_type!(u16);
-impl_add_matrix_for_type!(u32);
-impl_add_matrix_for_type!(u64);
-impl_add_matrix_for_type!(u128);
-impl_add_matrix_for_type!(f32);
-impl_add_matrix_for_type!(f64);
-
-// This trait is implemented to support for matrix addition
-// and assignment operator (+=)
-impl<T> ops::AddAssign<Matrix<T>> for Matrix<T>
-where
-    T: Num + Copy + ops::AddAssign,
-{
-    fn add_assign(&mut self, other: Matrix<T>) {
-        if self.shape() != other.shape() {
-            panic!(
-                "Matrix addition with invalid length: {:?} != {:?}",
-                self.shape(),
-                other.shape()
-            );
-        }
-
-        self.elements.iter_mut().enumerate().for_each(|(i, row)| {
-            row.elements
-                .iter_mut()
-                .enumerate()
-                .for_each(|(j, value)| *value += other[i][j])
-        })
-    }
-}
-
-// This trait is implemented to support for matrix addition
-// assignment operator (+=) with scalar on the right side,
-// for example:
-//
-// let a = matrix![5, 5; 5, 5];
-// a += 6;
-//
-impl<T> ops::AddAssign<T> for Matrix<T>
-where
-    T: Num + Copy + ops::AddAssign,
-{
-    fn add_assign(&mut self, value: T) {
-        self.elements.iter_mut().for_each(|row| {
-            row.elements.iter_mut().for_each(|elem| *elem += value)
-        })
-    }
-}
-
-// This trait is implemented to support for matrix
-// substraction operator
-impl<T> ops::Sub<Matrix<T>> for Matrix<T>
-where
-    T: Num + Copy,
-{
-    type Output = Matrix<T>;
-
-    fn sub(self, other: Matrix<T>) -> Matrix<T> {
-        if self.shape() != other.shape() {
-            panic!(
-                "Matrix substraction with invalid shape: {:?} != {:?}",
-                self.shape(),
-                other.shape()
-            );
-        }
-
-        // Substract the matrix
-        let elements = self
-            .elements
-            .iter()
-            .enumerate()
-            .map(|(i, row)| {
-                row.elements
-                    .iter()
-                    .enumerate()
-                    .map(|(j, value)| *value - other[i][j])
-                    .collect()
-            })
-            .collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
-        }
-    }
-}
-
-// This trait is implemented to support for matrix substraction
-// operator with scalar on the right side,
-// for example:
-//
-// let a = matrix![5, 5; 5, 5] - 6;
-//
-impl<T> ops::Sub<T> for Matrix<T>
-where
-    T: Num + Copy,
-{
-    type Output = Matrix<T>;
-
-    fn sub(self, value: T) -> Matrix<T> {
-        // Substract the matrix
-        let elements = self
-            .elements
-            .iter()
-            .map(|row| {
-                row.elements.iter().map(|elem| *elem - value).collect()
-            })
-            .collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
-        }
-    }
-}
-
-// This macro is to generate support for matrix substraction
-// operator with scalar on the left side,
-// for example:
-//
-// let a = 6 - matrix![5, 5; 5, 5];
-//
-macro_rules! impl_sub_matrix_for_type {
-    ($t: ty) => {
-        impl ops::Sub<Matrix<$t>> for $t {
-            type Output = Matrix<$t>;
-
-            fn sub(self, m: Matrix<$t>) -> Matrix<$t> {
-                // Substract the matrix
-                let elements = m
-                    .elements
-                    .iter()
-                    .map(|row| {
-                        row.elements.iter().map(|elem| self - elem).collect()
-                    })
-                    .collect();
-                Matrix {
-                    nrows: m.nrows,
-                    ncols: m.ncols,
-                    elements,
-                }
-            }
-        }
-    };
-}
-
-impl_sub_matrix_for_type!(usize);
-impl_sub_matrix_for_type!(i8);
-impl_sub_matrix_for_type!(i16);
-impl_sub_matrix_for_type!(i32);
-impl_sub_matrix_for_type!(i64);
-impl_sub_matrix_for_type!(i128);
-impl_sub_matrix_for_type!(u8);
-impl_sub_matrix_for_type!(u16);
-impl_sub_matrix_for_type!(u32);
-impl_sub_matrix_for_type!(u64);
-impl_sub_matrix_for_type!(u128);
-impl_sub_matrix_for_type!(f32);
-impl_sub_matrix_for_type!(f64);
-
-// This trait is implemented to support for matrix substraction
-// and assignment operator (-=)
-impl<T> ops::SubAssign<Matrix<T>> for Matrix<T>
-where
-    T: Num + Copy + ops::SubAssign,
-{
-    fn sub_assign(&mut self, other: Matrix<T>) {
-        if self.shape() != other.shape() {
-            panic!(
-                "Matrix substraction with invalid length: {:?} != {:?}",
-                self.shape(),
-                other.shape()
-            );
-        }
-
-        self.elements.iter_mut().enumerate().for_each(|(i, row)| {
-            row.elements
-                .iter_mut()
-                .enumerate()
-                .for_each(|(j, value)| *value -= other[i][j])
-        })
-    }
-}
-
-// This trait is implemented to support for matrix substraction
-// assignment operator (-=) with scalar on the right side,
-// for example:
-//
-// let a = matrix![5, 5; 5, 5];
-// a -= 6;
-//
-impl<T> ops::SubAssign<T> for Matrix<T>
-where
-    T: Num + Copy + ops::SubAssign,
-{
-    fn sub_assign(&mut self, value: T) {
-        self.elements.iter_mut().for_each(|row| {
-            row.elements.iter_mut().for_each(|elem| *elem -= value)
-        })
-    }
-}
-
-// This trait is implemented to support for matrix
-// multiplication operator
-impl<T> ops::Mul<Matrix<T>> for Matrix<T>
-where
-    T: Num + Copy,
-{
-    type Output = Matrix<T>;
-
-    fn mul(self, other: Matrix<T>) -> Matrix<T> {
-        if self.shape() != other.shape() {
-            panic!(
-                "Matrix multiplication with invalid shape: {:?} != {:?}",
-                self.shape(),
-                other.shape()
-            );
-        }
-
-        // Multiply the matrix
-        let elements = self
-            .elements
-            .iter()
-            .enumerate()
-            .map(|(i, row)| {
-                row.elements
-                    .iter()
-                    .enumerate()
-                    .map(|(j, value)| *value * other[i][j])
-                    .collect()
-            })
-            .collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
-        }
-    }
-}
-
-// This trait is implemented to support for matrix multiplication
-// operator with scalar on the right side,
-// for example:
-//
-// let a = matrix![5, 5; 5, 5] * 6;
-//
-impl<T> ops::Mul<T> for Matrix<T>
-where
-    T: Num + Copy,
-{
-    type Output = Matrix<T>;
-
-    fn mul(self, value: T) -> Matrix<T> {
-        // Multiply the matrix
-        let elements = self
-            .elements
-            .iter()
-            .map(|row| {
-                row.elements.iter().map(|elem| *elem * value).collect()
-            })
-            .collect();
-        Matrix {
-            nrows: self.nrows,
-            ncols: self.ncols,
-            elements,
-        }
-    }
-}
-
-// This macro is to generate support for matrix multiplication
-// operator with scalar on the left side,
-// for example:
-//
-// let a = 6 * matrix![5, 5; 5, 5];
-//
-macro_rules! impl_sub_matrix_for_type {
-    ($t: ty) => {
-        impl ops::Mul<Matrix<$t>> for $t {
-            type Output = Matrix<$t>;
-
-            fn mul(self, m: Matrix<$t>) -> Matrix<$t> {
-                // Multiply the matrix
-                let elements = m
-                    .elements
-                    .iter()
-                    .map(|row| {
-                        row.elements.iter().map(|elem| self * elem).collect()
-                    })
-                    .collect();
-                Matrix {
-                    nrows: m.nrows,
-                    ncols: m.ncols,
-                    elements,
-                }
-            }
-        }
-    };
-}
-
-impl_sub_matrix_for_type!(usize);
-impl_sub_matrix_for_type!(i8);
-impl_sub_matrix_for_type!(i16);
-impl_sub_matrix_for_type!(i32);
-impl_sub_matrix_for_type!(i64);
-impl_sub_matrix_for_type!(i128);
-impl_sub_matrix_for_type!(u8);
-impl_sub_matrix_for_type!(u16);
-impl_sub_matrix_for_type!(u32);
-impl_sub_matrix_for_type!(u64);
-impl_sub_matrix_for_type!(u128);
-impl_sub_matrix_for_type!(f32);
-impl_sub_matrix_for_type!(f64);
-
-// This trait is implemented to support for matrix substraction
-// and assignment operator (-=)
-impl<T> ops::MulAssign<Matrix<T>> for Matrix<T>
-where
-    T: Num + Copy + ops::MulAssign,
-{
-    fn mul_assign(&mut self, other: Matrix<T>) {
-        if self.shape() != other.shape() {
-            panic!(
-                "Matrix multiplication with invalid length: {:?} != {:?}",
-                self.shape(),
-                other.shape()
-            );
-        }
-
-        self.elements.iter_mut().enumerate().for_each(|(i, row)| {
-            row.elements
-                .iter_mut()
-                .enumerate()
-                .for_each(|(j, value)| *value *= other[i][j])
-        })
-    }
-}
-
-// This trait is implemented to support for matrix multiplication
-// assignment operator (*=) with scalar on the right side,
-// for example:
-//
-// let a = matrix![5, 5; 5, 5];
-// a *= 6;
-//
-impl<T> ops::MulAssign<T> for Matrix<T>
-where
-    T: Num + Copy + ops::MulAssign,
-{
-    fn mul_assign(&mut self, value: T) {
-        self.elements.iter_mut().for_each(|row| {
-            row.elements.iter_mut().for_each(|elem| *elem *= value)
-        })
-    }
-}
-
-/// Matrix loader for CSV formatted file.
+/// Column matrix is reference to a column of a matrix.
 ///
-/// See also: [`Matrix::from_csv`].
-///
-/// [`Matrix::from_csv`]: struct.Matrix.html#method.from_csv
-#[derive(Debug)]
-pub struct MatrixLoaderForCSV<T, P>
+/// It is a `nx1` matrix where `n` is a number of rows.
+pub struct ColumnMatrix<'a, T>
 where
-    P: AsRef<Path>,
+    T: Num + Copy,
 {
-    file_path: P,
-    has_headers: bool,
-    phantom: PhantomData<T>,
+    // Column position in the matrix
+    pos: usize,
+    // Offset from the start of the column; we use this
+    // to iterate over elements in the submatrix row
+    offset: usize,
+    // Column size,
+    size: usize,
+    // Original matrix; where to get the elements from
+    source: &'a Matrix<T>,
 }
 
-impl<T, P> MatrixLoaderForCSV<T, P>
+impl<'a, T> fmt::Debug for ColumnMatrix<'a, T>
 where
-    P: AsRef<Path>,
+    T: Num + Copy + fmt::Debug + ToString,
 {
-    /// Set to true to treat the first row as a special header row. By default, it is set
-    /// to false.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crabsformer::*;
-    ///
-    /// let dataset: Matrix<f32> = Matrix::from_csv("tests/dataset.csv")
-    ///     .has_headers(true)
-    ///     .load()
-    ///     .unwrap();
-    /// ```
-    pub fn has_headers(self, yes: bool) -> MatrixLoaderForCSV<T, P> {
-        MatrixLoaderForCSV {
-            file_path: self.file_path,
-            has_headers: yes,
-            phantom: PhantomData,
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut output = String::from("[");
+        for (i, value) in self.elements().enumerate() {
+            output += &value.to_string();
+            // Don't add comma to the end of line
+            if i < self.size - 1 {
+                output += "; ";
+            }
+        }
+        output += "]";
+        write!(f, "{}", output)
+    }
+}
+
+// Column matrix comparison
+// Column matrix is equal if the position and content are the same.
+impl<'a, T> PartialEq for ColumnMatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    fn eq(&self, other: &ColumnMatrix<'a, T>) -> bool {
+        if self.pos == other.pos
+            && self.size == other.size
+            && self.offset == other.offset
+            && self.source == other.source
+        {
+            true
+        } else {
+            false
         }
     }
 
-    /// Load Matrix from CSV file. You need to explicitly annotate the numeric type.
-    ///
-    /// # Examples
-    /// ```
-    /// use crabsformer::*;
-    ///
-    /// let dataset: Matrix<f32> = Matrix::from_csv("tests/weight.csv").load().unwrap();
-    /// ```
-    pub fn load(self) -> Result<Matrix<T>, LoadError>
-    where
-        T: FromPrimitive + Num + Copy + utils::TypeName,
-    {
-        // Open CSV file
-        let file = File::open(self.file_path)?;
-        let mut rdr = csv::ReaderBuilder::new()
-            .has_headers(self.has_headers)
-            .from_reader(file);
-        // Collect each row
-        let mut elements = Vec::new();
-        for result in rdr.records() {
-            // Convert each row in the CSV file to RowMatrix
-            let record = result?;
-            let mut rows = Vec::with_capacity(record.len());
-            for value in record.iter() {
-                // It will return error if any
-                let element = match T::from_str_radix(value.trim(), 10) {
-                    Ok(value) => value,
-                    Err(_err) => {
-                        // Return error early
-                        return Err(LoadError::new(
-                            LoadErrorKind::InvalidElement,
-                            format!(
-                                "{:?} is not valid {}",
-                                value,
-                                T::type_name()
-                            ),
-                        ));
-                    }
-                };
-                rows.push(element);
+    fn ne(&self, other: &ColumnMatrix<'a, T>) -> bool {
+        if self.pos != other.pos
+            || self.size != other.size
+            || self.offset != other.offset
+            || self.source != other.source
+        {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+/// Submatrix is a reference to a block of the elements in the matrix.
+///
+/// TODO(pyk): Add visualization here based on this:
+/// http://mathworld.wolfram.com/Submatrix.html
+pub struct Submatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    // The number of rows and columns of Submatrix
+    nrows: usize,
+    ncols: usize,
+    // Offset row & column from original matrix;
+    // we use these to access the data from original matrix
+    row_offset: usize,
+    col_offset: usize,
+    // Original matrix; where to get the elements from
+    source: &'a Matrix<T>,
+}
+
+impl<'a, T: 'a> Submatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    // Shape of the submatrix
+    pub fn shape(&self) -> [usize; 2] {
+        [self.nrows, self.ncols]
+    }
+
+    // Offsets of the submatrix `[row_offset, col_offset]`
+    pub fn offsets(&self) -> [usize; 2] {
+        [self.row_offset, self.col_offset]
+    }
+}
+
+impl<'a, T> fmt::Debug for Submatrix<'a, T>
+where
+    T: Num + Copy + fmt::Debug + ToString,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut output = String::from("[");
+        for (i, row) in self.rows().enumerate() {
+            let mut row_output = String::from("");
+            // add space to the next line
+            if i > 0 {
+                row_output += " ";
             }
-            elements.push(rows);
+            row_output += "[";
+            for (j, value) in row.elements().enumerate() {
+                row_output += &value.to_string();
+                // Don't add comma to the end of line
+                if j < self.ncols - 1 {
+                    row_output += ", ";
+                } else {
+                    row_output += "]";
+                }
+            }
+            // Don't add new line to the end of row
+            if i < self.ncols - 1 {
+                row_output += ",\n";
+            } else {
+                row_output += "]";
+            }
+            output += &row_output.to_string();
         }
-        if elements.len() == 0 {
-            return Err(LoadError::new(
-                LoadErrorKind::Empty,
-                String::from("Cannot load empty file"),
-            ));
+
+        write!(f, "{}", output)
+    }
+}
+
+// Submatrix comparison
+impl<'a, T> PartialEq for Submatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    fn eq(&self, other: &Submatrix<'a, T>) -> bool {
+        if self.shape() == other.shape()
+            && self.offsets() == other.offsets()
+            && self.source == other.source
+        {
+            true
+        } else {
+            false
         }
-        Ok(Matrix::from(elements))
+    }
+
+    fn ne(&self, other: &Submatrix<'a, T>) -> bool {
+        if self.shape() != other.shape()
+            || self.offsets() != other.offsets()
+            || self.source != other.source
+        {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::matrix;
+
+    #[test]
+    fn test_matrix_debug() {
+        let w = matrix![
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9;
+        ];
+        println!("{:?}", w);
+    }
+
+    #[test]
+    fn test_submatrix_debug() {
+        let w = matrix![
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9;
+        ];
+        let s = Submatrix {
+            nrows: 2,
+            ncols: 2,
+            row_offset: 1,
+            col_offset: 1,
+            source: &w,
+        };
+        println!("{:?}", s);
+    }
+
+    #[test]
+    fn test_row_matrix_debug() {
+        let w = matrix![
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9;
+        ];
+        println!("{:?}", w.row(0));
+        println!("{:?}", w.row(1));
+        println!("{:?}", w.row(2));
+    }
+
+    #[test]
+    fn test_column_matrix_debug() {
+        let w = matrix![
+            1, 2, 3;
+            4, 5, 6;
+            7, 8, 9;
+        ];
+        println!("{:?}", w.col(0));
+        println!("{:?}", w.col(1));
+        println!("{:?}", w.col(2));
     }
 }

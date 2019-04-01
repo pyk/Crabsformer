@@ -1265,3 +1265,94 @@ keyh.
 
 # Guides
 1. Numerical calculations with NumPy http://kestrel.nmt.edu/~raymond/software/python_notes/paper003.html
+
+# Why We Don't Need to Implement Index trait in Matrix?
+
+> In my eyes, you just gave a good reason to disallow using Index for a Matrix.
+> It's very, very unclear as to whether Index would return a row or a column.
+> Why not have row and column functions?
+
+Reddit discussion: [here](https://www.reddit.com/r/rust/comments/4as7gx/why_make_the_index_trait_so_useless/)
+
+# Get Column from Row Major Matrix
+Here link to the [playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&gist=ff1aa666b75e5774b3e8c1f989e4f078
+
+# SubMatrix
+This is a Vector and SubVector:
+
+```rust
+pub struct Vector<T>
+where
+    T: Num + Copy,
+{
+    elements: Vec<T>,
+}
+
+pub struct SubVector<'a, T>
+where
+    T: Num + Copy,
+{
+    inner: &'a [T],
+}
+```
+
+How Matrix and SubMatrix ? like this?
+
+```rust
+#[derive(Debug)]
+pub struct Matrix<T>
+where
+    T: Num + Copy,
+{
+    /// Matrix size
+    nrows: usize,
+    ncols: usize,
+    vec: Vector<T>,
+}
+
+#[derive(Debug)]
+pub struct SubMatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    nrows: usize,
+    ncols: usize,
+    vec: SubVector<'a, T>,
+}
+```
+
+Masalahnya adalah kalau row matrix atau matrix 1xm itu bisa.
+masalahnya ketika matrix mx1 atau mxn. SubMatrix berarti tidak contiguous
+lagi ya.
+
+```rust
+#[derive(Debug)]
+pub struct SubMatrix<'a, T>
+where
+    T: Num + Copy,
+{
+    nrows: usize,
+    ncols: usize,
+    vec: Vec<SubVector<'a, T>>,
+}
+```
+
+Jadi kek di store per rows gitu, soalnya satu rows di vecnya adalah SubVector<'a, T>
+keyh.
+
+Masalah 1: Cara compare SubMatrix dengan Matrix.
+
+SubMatrix adalah Vector of SubVector.
+kenapa? karena waktu slice dapetnya cuman itu. kalo di flatten gmn?
+Jadi SubVector<'a, T> ?
+apakah bisa?
+
+
+# Sampai mana?
+Indexing Submatrix.
+
+# Submatrix, Row matrix, Column matrix
+Anw, we see submatrix, row matrix, column matrix as a way to see the data. The only contains
+index information such as position, offset, size and the reference to the original matrix.
+
+We need to treat Subvector like this as well.

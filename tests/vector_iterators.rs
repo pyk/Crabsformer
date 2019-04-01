@@ -15,8 +15,12 @@
 use crabsformer::*;
 
 #[test]
-fn test_from() {
-    let x = vec![vec![1, 2, 3], vec![1, 2, 3]];
-    let m = Matrix::from(x);
-    assert_eq!(m.shape(), [2, 3]);
+fn test_elements() {
+    let x = vector![1, 2, 3];
+    let mut elements = x.elements();
+
+    assert_eq!(elements.next(), Some(&1));
+    assert_eq!(elements.next(), Some(&2));
+    assert_eq!(elements.next(), Some(&3));
+    assert_eq!(elements.next(), None);
 }

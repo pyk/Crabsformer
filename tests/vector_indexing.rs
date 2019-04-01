@@ -15,8 +15,18 @@
 use crabsformer::*;
 
 #[test]
-fn test_from() {
-    let x = vec![vec![1, 2, 3], vec![1, 2, 3]];
-    let m = Matrix::from(x);
-    assert_eq!(m.shape(), [2, 3]);
+fn test_indexing() {
+    let a = vector![3, 1, 4, 1, 5];
+    assert_eq!(a[0], 3);
+    assert_eq!(a[1], 1);
+    assert_eq!(a[2], 4);
+    assert_eq!(a[3], 1);
+    assert_eq!(a[4], 5);
+}
+
+#[test]
+#[should_panic]
+fn test_invalid_index() {
+    let x = vector![3, 1, 2, 3];
+    x[12];
 }
