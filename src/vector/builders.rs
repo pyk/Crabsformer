@@ -12,17 +12,157 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A list of function to build a new Numeric Vector.
+//! A macro and functions to create new numeric vector.
 //!
-//! TODO(pyk): Add docs here
+//! # Overview
+//! There are 4 general mechanisms for creating numeric vectors:
 //!
+//! 1. Conversion from other Rust primitive data types [array] & [slice].
+//! 2. Conversion from other Rust data structure [`Vec<T>`].
+//! 3. Crabsformer numeric vector macro [`vector!`].
+//! 4. Intrinsic Crabformer numeric vector creation functions (e.g., `range`,
+//! `ones`, `zeros`, etc.)
+//!
+//! This section will not cover means of replicating, joining, or otherwise
+//! expanding or mutating existing numeric vectors. Those are covered in
+//! their own sections.
+//!
+//! [array]: https://doc.rust-lang.org/std/primitive.array.html
+//! [slice]: https://doc.rust-lang.org/std/primitive.slice.html
+//! [`Vec<T>`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+//! [`vector!`]: ../../macro.vector.html
+//!
+//! # Converting Array, Slice and Vector to Numeric Vector
+//! In general, numerical data arranged in an array-like structure in Rust can
+//! be converted to numeric vectors through the use of the `Vector::from`
+//! function. The most obvious examples are [array] and [slice].
+//!
+//! Examples:
+//!
+//! ```
+//! # use crabsformer::prelude::*;
+//! let x1 = Vector::from([1, 2, 3, 4]);
+//! let x2 = Vector::from(&[3, 1, 4, 5]);
+//! let x3 = Vector::from(vec![1, 4, 5]);
+//! ```
+//!
+//! # Numeric Vector Macro
+//! [`vector!`] allows numeric vector to be defined with the same syntax as
+//! array expressions. There are two forms of this macro:
+//!
+//! 1. Create a numeric vector containing a given list of elements:
+//!
+//! ```
+//! # use crabsformer::prelude::*;
+//! let x = vector![1, 2, 3];
+//! assert_eq!(x[0], 1);
+//! assert_eq!(x[1], 2);
+//! assert_eq!(x[2], 3);
+//!```
+//!
+//! 2. Create a numeric vector from a given element and length:
+//!
+//! ```
+//! # use crabsformer::prelude::*;
+//! let x = vector![1; 3];
+//! assert_eq!(x, vector![1, 1, 1]);
+//! ```
+//!
+//! # Intrinsic Numeric Vector Creation
+//! Crabsformer has built-in functions for creating numeric vectors from
+//! scratch:
+//!
+//! [`Vector::zeros`] will create a numeric vector filled with 0 values
+//! with the specified length.
+//!
+//! ```
+//! # use crabsformer::prelude::*;
+//! let v: Vector<i32> = Vector::zeros(5);
+//! ```
+//!
+//! [`Vector::ones`] will create an array filled with 1 values. It is
+//! identical to zeros in all other respects.
+//!
+//! [`Vector::range`] will create numeric vectors with regularly incrementing
+//! values.
+//!
+//! ```
+//! # use crabsformer::prelude::*;
+//! let v = Vector::range(0.0, 3.0, 0.5);
+//! // v = vector![0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
+//! ```
+//!
+//! [`Vector::linspace`] will create numeric vectors with a specified number of
+//! elements, and spaced equally between the specified beginning and end
+//! values. For example:
+//!
+//! ```
+//! # use crabsformer::prelude::*;
+//! let a = Vector::linspace(5, 1.0, 10.0);
+//! // vector![1.0, 3.25, 5.5, 7.75, 10.0]
+//! ```
+//! The advantage of this creation function is that one can guarantee the
+//! number of elements and the starting and end point, which [`Vector::range`]
+//! generally will not do for arbitrary `start`, `stop`, and `step` values.
+//!
+//! See all available functions below.
+//!
+//! # Functions
+//!
+//! 1. **Ones and zeros**
+//!     - [`Vector::ones`]: Create a new numeric vector of given length and
+//!         type, filled with ones.
+//!     - [`Vector::ones_like`]: Create a new numeric vector that have the same
+//!         length and type as given numeric vector, filled with ones.
+//!     - [`Vector::zeros`]: Create a new numeric vector of given length and
+//!         type, filled with zeros.
+//!     - [`Vector::zeros_like`]: Create a new numeric vector that have the same
+//!         length and type as given numeric vector, filled with zeros.
+//!     - [`Vector::full`]: Create a new numeric vector of given length and
+//!         type, filled with specified value.
+//!     - [`Vector::full_like`]: Create a new numeric vector that have the same
+//!         length and type as given numeric vector, filled with specified
+//!         value.
+//!
+//! 2. **From existing data**
+//!     - `Vector::from`: Convert array, slice or [`Vec<T>`] to numeric
+//!         vector.
+//!     - [`Vector::copy`]: Create a numeric vector copy of the given numeric
+//!         vector.
+//!
+//! 3. **Numerical ranges**
+//!     - [`Vector::range`]: Create a new numeric vector of evenly spaced
+//!         values.
+//!     - [`Vector::linspace`]: Create a new numeric vector of the given length
+//!          and populate it with linearly spaced values.
+//!     - `Vector::logspace` ([#20][issue-20]): Create a new numeric vector of
+//!         the given length and populate it with logarithmically spaced values.
+//!     - `Vector::geomspace` ([#21][issue-21]): Create a new numeric vector of
+//!         the given length and populate it with evenly spaced values on a log
+//!         scale (a geometric progression).
+//!
+//! - Simple random data
+//! - Permutations
+//! - Distributions
+//!
+//! [`Vector::copy`]: ../struct.Vector.html#method.copy
+//! [`Vector::zeros`]: ../struct.Vector.html#method.zeros
+//! [`Vector::zeros_like`]: ../struct.Vector.html#method.zeros_like
+//! [`Vector::ones`]: ../struct.Vector.html#method.ones
+//! [`Vector::ones_like`]: ../struct.Vector.html#method.ones_like
+//! [`Vector::full`]: ../struct.Vector.html#method.full
+//! [`Vector::full_like`]: ../struct.Vector.html#method.full_like
+//! [`Vector::range`]: ../struct.Vector.html#method.range
+//! [`Vector::linspace`]: ../struct.Vector.html#method.linspace
+//! [issue-20]: https://github.com/pyk/Crabsformer/issues/20
+//! [issue-21]: https://github.com/pyk/Crabsformer/issues/21
 //!
 
+use crate::vector::errors::{VectorBuilderError, VectorBuilderErrorKind};
 use crate::vector::Vector;
 use num::{Float, FromPrimitive, Num};
 use rand::distributions::uniform::SampleUniform;
 use rand::distributions::{Distribution, Normal, Uniform};
-use std::fmt;
 use std::ops;
 
 /// Creates a [numeric vector] containing the arguments.
@@ -64,15 +204,83 @@ macro_rules! vector {
     }};
 }
 
+// Macro to generate implementation of trait From
+// for array and slice.
+// https://doc.rust-lang.org/std/convert/trait.From.html
+macro_rules! numeric_vector_from_array_and_slices_impls {
+    ($($N:expr)+) => {
+    $(
+        // Conversion from static array to numeric vector
+        impl<T> From<[T; $N]> for Vector<T>
+        where
+            T: Num + Copy,
+        {
+            fn from(elements: [T; $N]) -> Self {
+                Vector::from(elements.to_vec())
+            }
+        }
+
+        // Conversion from slice to numeric vector
+        impl<T> From<&[T; $N]> for Vector<T>
+        where
+            T: Num + Copy,
+        {
+            fn from(elements: &[T; $N]) -> Self {
+                Vector::from(elements.to_vec())
+            }
+        }
+    )+
+    };
+}
+
+// Conversion from slice to numeric vector
+impl<T> From<&[T]> for Vector<T>
+where
+    T: Num + Copy,
+{
+    fn from(elements: &[T]) -> Self {
+        Vector::from(elements.to_vec())
+    }
+}
+
+numeric_vector_from_array_and_slices_impls! {
+     0  1  2  3  4  5  6  7  8  9
+    10 11 12 13 14 15 16 17 18 19
+    20 21 22 23 24 25 26 27 28 29
+    30 31 32
+}
+
+// Conversion from Vec<T>
+impl<T> From<Vec<T>> for Vector<T>
+where
+    T: Num + Copy,
+{
+    fn from(elements: Vec<T>) -> Self {
+        Vector { data: elements }
+    }
+}
+
 impl<T> Vector<T>
 where
     T: Num + Copy,
 {
+    /// Create a new numeric vector copy of the given numeric vector. This is
+    /// similar to `vector.clone()` method.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crabsformer::prelude::*;
+    /// let x = vector![3, 1, 4];
+    /// let y = Vector::copy(&x);
+    /// ```
+    pub fn copy(source: &Vector<T>) -> Vector<T> {
+        source.clone()
+    }
+
     /// Create a new numeric vector of given length `len` and type `T`,
     /// filled with `value`.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v = Vector::full(5, 2.5);
@@ -85,10 +293,9 @@ where
     }
 
     /// Create a new numeric vector that have the same length and type
-    /// as vector `v`, filled with `value`.
+    /// as numeric vector `v`, filled with `value`.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v1 = vector![3.0, 1.0, 4.0, 1.0, 5.0];
@@ -102,11 +309,9 @@ where
     }
 
     /// Create a new numeric vector of given length `len` and type `T`,
-    /// filled with zeros. You need to explicitly annotate the
-    /// numeric type.
+    /// filled with zeros. You need to explicitly annotate the numeric type.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v: Vector<i32> = Vector::zeros(5);
@@ -118,11 +323,10 @@ where
         vector![T::from_i32(0).unwrap(); len]
     }
 
-    /// Create a new numeric vector that have the same length and type
-    /// as vector `v`, filled with zeros.
+    /// Create a new numeric vector that have the same length and type as
+    /// numeric vector `v`, filled with zeros.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v1 = vector![3, 1, 4, 1, 5];
@@ -136,11 +340,9 @@ where
     }
 
     /// Create a new numeric vector of given length `len` and type `T`,
-    /// filled with ones. You need to explicitly annotate the
-    /// numeric type.
+    /// filled with ones. You need to explicitly annotate the numeric type.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v: Vector<i32> = Vector::ones(10);
@@ -152,11 +354,10 @@ where
         vector![T::from_i32(1).unwrap(); len]
     }
 
-    /// Create a new numeric vector that have the same length and type
-    /// as vector `v`, filled with ones.
+    /// Create a new numeric vector that have the same length and type as
+    /// numeric vector `v`, filled with ones.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v1 = vector![3, 1, 4, 1, 5];
@@ -168,96 +369,90 @@ where
     {
         vector![T::from_i32(1).unwrap(); v.len()]
     }
+}
 
-    /// Create a new numeric vector of the given length `len` and
-    /// populate it with random samples from a uniform distribution
-    /// over the half-open interval `[low, high)` (includes `low`,
-    /// but excludes `high`).
+impl<T> Vector<T>
+where
+    T: Num + Copy + FromPrimitive + PartialOrd + ops::AddAssign,
+{
+    /// Create a new numeric vector of evenly spaced values within a given
+    /// half-open interval `[start, stop)` and spacing value `step`. Values
+    /// are generated within the half-open interval `[start, stop)` (in other
+    /// words, the interval including `start` but excluding `stop`).
+    ///
+    /// **Note that**:
+    /// 1. If `step = 0` it will returns an error.
+    /// 2. If `start < stop`, the step value should be `step > 0`, otherwise
+    /// it will returns an error.
+    /// 3. If `start > stop`, the step value should be `step < 0`, otherwise
+    /// it will returns an error.
     ///
     /// # Examples
-    ///
-    /// ```
-    /// # use crabsformer::prelude::*;
-    /// let v = Vector::uniform(5, 0.0, 1.0);
-    /// ```
-    pub fn uniform(len: usize, low: T, high: T) -> Vector<T>
-    where
-        T: SampleUniform,
-    {
-        let mut elements = Vec::with_capacity(len);
-        let uniform_distribution = Uniform::new(low, high);
-        let mut rng = rand::thread_rng();
-        for _ in 0..len {
-            elements.push(uniform_distribution.sample(&mut rng));
-        }
-
-        Vector { data: elements }
-    }
-
-    /// Create a new numeric vector of evenly spaced values
-    /// within a given half-open interval `[start, stop)` and
-    /// spacing value `step`. Values are generated within the
-    /// half-open interval `[start, stop)` (in other words, the
-    /// interval including `start` but excluding `stop`).
-    ///
-    /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v = Vector::range(0.0, 3.0, 0.5);
-    /// // v = vector![0.0, 0.5, 1.0, 1.5, 2.0, 2.5]
     /// ```
-    ///
-    /// # Panics
-    /// Panics if `start >= stop`.
-    pub fn range(start: T, stop: T, step: T) -> Vector<T>
-    where
-        T: Num
-            + FromPrimitive
-            + Copy
-            + PartialOrd
-            + ops::AddAssign
-            + fmt::Display,
-    {
-        // If interval is invalid; then panic
-        if start >= stop {
-            panic!("Invalid range interval start={} stop={}", start, stop)
+    pub fn range(
+        start: T,
+        stop: T,
+        step: T,
+    ) -> Result<Vector<T>, VectorBuilderError> {
+        let zero = T::from_i32(0).unwrap();
+        // If step = 0, returns error
+        if step == zero {
+            return Err(VectorBuilderError::new(
+                VectorBuilderErrorKind::RangeInvalidStepValue,
+                "the step value should not equal to zero".to_string(),
+            ));
         }
+        // If start > stop and step > 0, returns error
+        if start > stop && step > zero {
+            return Err(VectorBuilderError::new(
+                VectorBuilderErrorKind::RangeInvalidStepValue,
+                "the step value should be negative".to_string(),
+            ));
+        }
+        // If start < stop and step < 0, returns error
+        if start < stop && step < zero {
+            return Err(VectorBuilderError::new(
+                VectorBuilderErrorKind::RangeInvalidStepValue,
+                "the step value should be positive".to_string(),
+            ));
+        }
+
+        // Initialize the vector
         let mut elements = Vec::new();
         let mut current_step = start;
-        while current_step < stop {
+        if start > stop {
+            while current_step > stop {
+                elements.push(current_step);
+                current_step += step;
+            }
+        } else if start < stop {
+            while current_step < stop {
+                elements.push(current_step);
+                current_step += step;
+            }
+        } else {
+            // case: start == stop
             elements.push(current_step);
-            current_step += step;
         }
-        Vector { data: elements }
+        Ok(Vector::from(elements))
     }
 
-    /// Create a new numeric vector of the given length `len`
-    /// and populate it with linearly spaced values within a
-    /// given closed interval `[start, stop]`.
+    /// Create a new numeric vector of the given length `len` and populate it
+    /// with linearly spaced values within a given closed interval `[start,
+    /// stop]`.
     ///
     /// # Examples
-    ///
     /// ```
     /// # use crabsformer::prelude::*;
-    /// let a = Vector::linspace(5, 1.0, 10.0); // vector![1.0, 3.25, 5.5, 7.75, 10.0]
+    /// let a = Vector::linspace(5, 1.0, 10.0);
     /// ```
-    ///
-    /// # Panics
-    /// Panics if `start >= stop`.
     pub fn linspace(len: usize, start: T, stop: T) -> Vector<T>
     where
-        T: Float
-            + FromPrimitive
-            + Copy
-            + PartialOrd
-            + ops::AddAssign
-            + fmt::Display,
+        T: Float,
     {
-        // Panics if start >= stop, it should be start < stop
-        if start >= stop {
-            panic!("Invalid linspace interval start={} stop={}", start, stop)
-        }
         // Convert len to float type
         let divisor = T::from_usize(len).unwrap();
         let mut elements = Vec::with_capacity(len);
@@ -277,15 +472,85 @@ where
 
         Vector { data: elements }
     }
-}
 
-impl Vector<f64> {
-    /// Create a new numeric vector of the given length `len` and
-    /// populate it with random samples from a normal distribution
-    /// `N(mean, std_dev**2)`.
+    /// Create a new numeric vector of the given length `len` and populate it
+    /// with logarithmically spaced values within a given closed interval
+    /// `[10^a, 10^b]`.
+    ///
+    /// The `Vector::logspace` function is especially useful for creating
+    /// frequency numeric vectors.
     ///
     /// # Examples
     ///
+    /// ```
+    /// # use crabsformer::prelude::*;
+    /// // TODO(pyk): Uncomment this if the function is already implemented
+    /// // let a = Vector::logspace(5, 2.0, 3.0);
+    /// ```
+    pub fn logspace(_len: usize, _a: T, _b: T) -> Vector<T>
+    where
+        T: Float,
+    {
+        unimplemented!();
+    }
+
+    /// Create a new numeric vector of the given length `len` and populate it
+    /// with logarithmically spaced values within a given closed interval
+    /// `[start, end]`.
+    ///
+    /// This is similar to `Vector::logspace`, but with endpoints specified
+    /// directly. Each output sample is a constant multiple of the previous.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use crabsformer::prelude::*;
+    /// // TODO(pyk): Uncomment this if the function is already implemented
+    /// // let a = Vector::geomspace(5, 100.0, 1000.0);
+    /// // similar to:
+    /// // let b = Vector::logspace(5, 2.0, 3.0);
+    /// ```
+    pub fn geomspace(_len: usize, _start: T, _end: T) -> Vector<T>
+    where
+        T: Float,
+    {
+        unimplemented!();
+    }
+}
+
+impl<T> Vector<T>
+where
+    T: Num + Copy,
+{
+    /// Create a new numeric vector of the given length `len` and populate it
+    /// with random samples from a uniform distribution over the half-open
+    /// interval `[low, high)` (includes `low`, but excludes `high`).
+    ///
+    /// # Examples
+    /// ```
+    /// # use crabsformer::prelude::*;
+    /// let v = Vector::uniform(5, 0.0, 1.0);
+    /// ```
+    pub fn uniform(len: usize, low: T, high: T) -> Vector<T>
+    where
+        T: SampleUniform,
+    {
+        let mut elements = Vec::with_capacity(len);
+        let uniform_distribution = Uniform::new(low, high);
+        let mut rng = rand::thread_rng();
+        for _ in 0..len {
+            elements.push(uniform_distribution.sample(&mut rng));
+        }
+
+        Vector { data: elements }
+    }
+}
+
+impl Vector<f64> {
+    /// Create a new numeric vector of the given length `len` and populate it
+    /// with random samples from a normal distribution `N(mean, std_dev**2)`.
+    ///
+    /// # Examples
     /// ```
     /// # use crabsformer::prelude::*;
     /// let v = Vector::normal(5, 0.0, 1.0); // Gaussian mean=0.0 std_dev=1.0
