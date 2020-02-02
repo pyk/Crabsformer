@@ -467,6 +467,8 @@
 //! [Apache-2.0]: https://github.com/pyk/crabsformer/blob/master/LICENSE
 //!
 
+#![feature(const_generics)]
+
 pub mod matrix;
 pub mod prelude;
 pub mod utils;

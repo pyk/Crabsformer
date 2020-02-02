@@ -163,8 +163,8 @@ use crate::vector::Vector;
 use num::{Float, FromPrimitive, Num};
 use rand::distributions::uniform::SampleUniform;
 use rand::distributions::{Distribution, Normal, Uniform};
-use rand::{FromEntropy, SeedableRng};
 use rand::rngs::SmallRng;
+use rand::{FromEntropy, SeedableRng};
 use std::fmt;
 use std::ops;
 
@@ -214,7 +214,7 @@ macro_rules! numeric_vector_from_array_and_slices_impls {
     ($($N:expr)+) => {
     $(
         // Conversion from static array to numeric vector
-        impl<T> From<[T; $N]> for Vector<T>
+        impl<T, const N: usize> From<[T; $N]> for Vector<T, {N}>
         where
             T: Num + Copy,
         {
@@ -224,7 +224,7 @@ macro_rules! numeric_vector_from_array_and_slices_impls {
         }
 
         // Conversion from slice to numeric vector
-        impl<T> From<&[T; $N]> for Vector<T>
+        impl<T, const N: usize> From<&[T; $N]> for Vector<T, {N}>
         where
             T: Num + Copy,
         {
@@ -237,7 +237,7 @@ macro_rules! numeric_vector_from_array_and_slices_impls {
 }
 
 // Conversion from slice to numeric vector
-impl<T> From<&[T]> for Vector<T>
+impl<T, const N: usize> From<&[T]> for Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -254,7 +254,7 @@ numeric_vector_from_array_and_slices_impls! {
 }
 
 // Conversion from Vec<T>
-impl<T> From<Vec<T>> for Vector<T>
+impl<T, const N: usize> From<Vec<T>> for Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -263,7 +263,7 @@ where
     }
 }
 
-impl<T> Vector<T>
+impl<T, const N: usize> Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -276,7 +276,7 @@ where
     /// let x = vector![3, 1, 4];
     /// let y = Vector::copy(&x);
     /// ```
-    pub fn copy(source: &Vector<T>) -> Vector<T> {
+    pub fn copy(source: &Vector<T, { N }>) -> Vector<T, { N }> {
         source.clone()
     }
 
@@ -286,13 +286,13 @@ where
     /// # Examples
     /// ```
     /// # use crabsformer::prelude::*;
-    /// let v = Vector::full(5, 2.5);
+    /// let v: Vector<f32, 5> = Vector::full(2.5);
     /// ```
-    pub fn full(len: usize, value: T) -> Vector<T>
+    pub fn full(value: T) -> Vector<T, { N }>
     where
         T: FromPrimitive,
     {
-        vector![value; len]
+        vector![value; N]
     }
 
     /// Create a new numeric vector that have the same length and type
@@ -304,26 +304,27 @@ where
     /// let v1 = vector![3.0, 1.0, 4.0, 1.0, 5.0];
     /// let v2 = Vector::full_like(&v1, 3.1415);
     /// ```
-    pub fn full_like(v: &Vector<T>, value: T) -> Vector<T>
+    pub fn full_like(v: &Vector<T, { N }>, value: T) -> Vector<T, { N }>
     where
         T: FromPrimitive + Num + Copy,
     {
-        vector![value; v.len()]
+        vector![value; N]
     }
 
     /// Create a new numeric vector of given length `len` and type `T`,
-    /// filled with zeros. You need to explicitly annotate the numeric type.
+    /// filled with zeros. You need to explicitly annotate the numeric type
+    /// and the length of the vector.
     ///
     /// # Examples
     /// ```
     /// # use crabsformer::prelude::*;
-    /// let v: Vector<i32> = Vector::zeros(5);
+    /// let v: Vector<i32, 5> = Vector::zeros();
     /// ```
-    pub fn zeros(len: usize) -> Vector<T>
+    pub fn zeros() -> Vector<T, { N }>
     where
         T: FromPrimitive + Num + Copy,
     {
-        vector![T::from_i32(0).unwrap(); len]
+        vector![T::from_i32(0).unwrap(); N]
     }
 
     /// Create a new numeric vector that have the same length and type as
@@ -335,26 +336,27 @@ where
     /// let v1 = vector![3, 1, 4, 1, 5];
     /// let v2 = Vector::zeros_like(&v1);
     /// ```
-    pub fn zeros_like(v: &Vector<T>) -> Vector<T>
+    pub fn zeros_like(v: &Vector<T, { N }>) -> Vector<T, { N }>
     where
         T: FromPrimitive + Num + Copy,
     {
-        vector![T::from_i32(0).unwrap(); v.len()]
+        vector![T::from_i32(0).unwrap(); N]
     }
 
     /// Create a new numeric vector of given length `len` and type `T`,
-    /// filled with ones. You need to explicitly annotate the numeric type.
+    /// filled with ones. You need to explicitly annotate the numeric type
+    /// and the length of the vector.
     ///
     /// # Examples
     /// ```
     /// # use crabsformer::prelude::*;
-    /// let v: Vector<i32> = Vector::ones(10);
+    /// let v: Vector<i32, 10> = Vector::ones();
     /// ```
-    pub fn ones(len: usize) -> Vector<T>
+    pub fn ones() -> Vector<T, { N }>
     where
         T: FromPrimitive + Num + Copy,
     {
-        vector![T::from_i32(1).unwrap(); len]
+        vector![T::from_i32(1).unwrap(); N]
     }
 
     /// Create a new numeric vector that have the same length and type as
@@ -366,15 +368,15 @@ where
     /// let v1 = vector![3, 1, 4, 1, 5];
     /// let v2 = Vector::ones_like(&v1);
     /// ```
-    pub fn ones_like(v: &Vector<T>) -> Vector<T>
+    pub fn ones_like(v: &Vector<T, { N }>) -> Vector<T, { N }>
     where
         T: FromPrimitive + Num + Copy,
     {
-        vector![T::from_i32(1).unwrap(); v.len()]
+        vector![T::from_i32(1).unwrap(); N]
     }
 }
 
-impl<T> Vector<T>
+impl<T, const N: usize> Vector<T, { N }>
 where
     T: Num + Copy + FromPrimitive + PartialOrd + ops::AddAssign,
 {
@@ -399,7 +401,7 @@ where
         start: T,
         stop: T,
         step: T,
-    ) -> Result<Vector<T>, VectorBuilderError> {
+    ) -> Result<Vector<T, { N }>, VectorBuilderError> {
         let zero = T::from_i32(0).unwrap();
         // If step = 0, returns error
         if step == zero {
@@ -450,15 +452,15 @@ where
     /// # Examples
     /// ```
     /// # use crabsformer::prelude::*;
-    /// let a = Vector::linspace(5, 1.0, 10.0);
+    /// let a: Vector<f32, 5> = Vector::linspace(1.0, 10.0);
     /// ```
-    pub fn linspace(len: usize, start: T, stop: T) -> Vector<T>
+    pub fn linspace(start: T, stop: T) -> Vector<T, { N }>
     where
         T: Float,
     {
         // Convert len to float type
-        let divisor = T::from_usize(len).unwrap();
-        let mut elements = Vec::with_capacity(len);
+        let divisor = T::from_usize(N).unwrap();
+        let mut elements = Vec::with_capacity(N);
         let mut current_step = start;
         let step = (stop - start) / (divisor - T::from_f32(1.0).unwrap());
         while current_step < stop {
@@ -467,8 +469,8 @@ where
         }
 
         // Include the `stop` value in the generated sequences
-        if elements.len() == len {
-            elements[len - 1] = stop;
+        if elements.len() == N {
+            elements[N - 1] = stop;
         } else {
             elements.push(stop);
         }
@@ -488,9 +490,9 @@ where
     /// ```
     /// # use crabsformer::prelude::*;
     /// // TODO(pyk): Uncomment this if the function is already implemented
-    /// // let a = Vector::logspace(5, 2.0, 3.0);
+    /// // let a = Vector::logspace(2.0, 3.0);
     /// ```
-    pub fn logspace(_len: usize, _a: T, _b: T) -> Vector<T>
+    pub fn logspace(_a: T, _b: T) -> Vector<T, { N }>
     where
         T: Float,
     {
@@ -509,11 +511,11 @@ where
     /// ```
     /// # use crabsformer::prelude::*;
     /// // TODO(pyk): Uncomment this if the function is already implemented
-    /// // let a = Vector::geomspace(5, 100.0, 1000.0);
+    /// // let a: Vector<f32, 5> = Vector::geomspace(100.0, 1000.0);
     /// // similar to:
-    /// // let b = Vector::logspace(5, 2.0, 3.0);
+    /// // let b: Vector<f32, 5> = Vector::logspace(5, 2.0, 3.0);
     /// ```
-    pub fn geomspace(_len: usize, _start: T, _end: T) -> Vector<T>
+    pub fn geomspace(_start: T, _end: T) -> Vector<T, { N }>
     where
         T: Float,
     {
@@ -561,14 +563,13 @@ impl RandomVectorBuilder {
     /// ```
     /// # use crabsformer::prelude::*;
     /// let mut rvb = RandomVectorBuilder::new();
-    /// let v = rvb.uniform(5, 0.0, 1.0).unwrap();
+    /// let v: Vector<f32, 5> = rvb.uniform(0.0, 1.0).unwrap();
     /// ```
-    pub fn uniform<T>(
+    pub fn uniform<T, const N: usize>(
         &mut self,
-        len: usize,
         low: T,
         high: T,
-    ) -> Result<Vector<T>, VectorBuilderError>
+    ) -> Result<Vector<T, { N }>, VectorBuilderError>
     where
         T: Num + Copy + SampleUniform + PartialOrd + fmt::Display,
     {
@@ -580,9 +581,9 @@ impl RandomVectorBuilder {
             ));
         }
 
-        let mut elements = Vec::with_capacity(len);
+        let mut elements = Vec::with_capacity(N);
         let uniform_distribution = Uniform::new(low, high);
-        for _ in 0..len {
+        for _ in 0..N {
             elements.push(uniform_distribution.sample(&mut self.rng));
         }
 
@@ -599,23 +600,22 @@ impl RandomVectorBuilder {
     /// # use crabsformer::prelude::*;
     /// let mut rvb = RandomVectorBuilder::new();
     /// // Gaussian mean=0.0 std_dev=1.0
-    /// let v = rvb.normal(5, 0.0, 1.0).unwrap();
+    /// let v: Vector<f32, 5> = rvb.normal(0.0, 1.0).unwrap();
     /// ```
-    pub fn normal(
+    pub fn normal<const N: usize>(
         &mut self,
-        len: usize,
         mean: f64,
         std_dev: f64,
-    ) -> Result<Vector<f64>, VectorBuilderError> {
+    ) -> Result<Vector<f64, { N }>, VectorBuilderError> {
         if std_dev < 0.0 {
             return Err(VectorBuilderError::new(
                 VectorBuilderErrorKind::NegativeStandardDeviation,
                 format!("{}", std_dev),
             ));
         }
-        let mut elements = Vec::with_capacity(len);
+        let mut elements = Vec::with_capacity(N);
         let normal_distribution = Normal::new(mean, std_dev);
-        for _ in 0..len {
+        for _ in 0..N {
             elements.push(normal_distribution.sample(&mut self.rng));
         }
 

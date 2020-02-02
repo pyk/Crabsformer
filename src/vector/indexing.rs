@@ -23,17 +23,16 @@ use crate::vector::Vector;
 use num::Num;
 use std::ops;
 
-impl<T> Vector<T>
+impl<T, const N: usize> Vector<T, { N }>
 where
     T: Num + Copy,
 {
     // Bound checking
     pub(crate) fn check_bound(&self, i: usize) {
-        if i >= self.len() {
+        if i >= N {
             panic!(
                 "Vector index {} out of range for vector with length {}",
-                i,
-                self.len()
+                i, N
             )
         }
     }
@@ -41,7 +40,7 @@ where
 
 // Implement vector indexing
 // vector[index]
-impl<T> ops::Index<usize> for Vector<T>
+impl<T, const N: usize> ops::Index<usize> for Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -54,7 +53,7 @@ where
 }
 // Implement vector indexing in mutable context
 // vector[index] = lut
-impl<T> ops::IndexMut<usize> for Vector<T>
+impl<T, const N: usize> ops::IndexMut<usize> for Vector<T, { N }>
 where
     T: Num + Copy,
 {

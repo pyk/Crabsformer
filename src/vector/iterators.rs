@@ -24,22 +24,22 @@ use num::Num;
 use std::iter;
 
 // Implement row iterator for matrix
-pub struct VectorElementIterator<'a, T: 'a>
+pub struct VectorElementIterator<'a, T: 'a, const N: usize>
 where
     T: Num + Copy,
 {
-    vector: &'a Vector<T>,
+    vector: &'a Vector<T, { N }>,
     pos: usize,
 }
 
-impl<'a, T> Iterator for VectorElementIterator<'a, T>
+impl<'a, T, const N: usize> Iterator for VectorElementIterator<'a, T, { N }>
 where
     T: Num + Copy,
 {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.vector.len() {
+        if self.pos >= N {
             return None;
         }
         // Increment the position of the row iterator.
@@ -79,7 +79,7 @@ where
 //}
 
 // Create numeric vector from an iterator
-impl<T> iter::FromIterator<T> for Vector<T>
+impl<T, const N: usize> iter::FromIterator<T> for Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -94,7 +94,7 @@ where
     }
 }
 
-impl<T> Vector<T>
+impl<T, const N: usize> Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -111,7 +111,7 @@ where
     /// assert_eq!(elements.next(), Some(&3));
     /// assert_eq!(elements.next(), None);
     /// ```
-    pub fn elements<'a>(&'a self) -> VectorElementIterator<'a, T> {
+    pub fn elements<'a>(&'a self) -> VectorElementIterator<'a, T, { N }> {
         VectorElementIterator {
             vector: self,
             pos: 0,

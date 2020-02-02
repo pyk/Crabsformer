@@ -35,7 +35,7 @@ pub mod slicing;
 /// Numeric vectors.
 ///
 /// # Overview
-/// `Vector<T>` is a fixed-length list of elements of the same [numeric type].
+/// `Vector<T, N>` is a fixed-length list of elements of the same [numeric type].
 /// It has one atribute called [`len`] to represent the total number of
 /// elements. It is pronounced as 'numeric vector' to avoid confussion with
 /// Rust's vector [`Vec<T>`] data structure.
@@ -57,7 +57,7 @@ pub mod slicing;
 /// - [Numeric vector loaders], load numeric vectors from disk.
 ///
 /// [`len`]: #method.len
-/// [`Vec<T>`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+/// [`Vec<T, N>`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
 /// [quickstart tutorial]: ../index.html#quickstart-tutorial
 /// [numeric vector builders]: builders/index.html
 /// [indexing numeric vector]: indexing/index.html
@@ -67,14 +67,14 @@ pub mod slicing;
 /// [slicing numeric vector]: slicing/index.html
 /// [numeric type]: https://doc.rust-lang.org/reference/types/numeric.html
 ///
-pub struct Vector<T>
+pub struct Vector<T, const N: usize>
 where
     T: Num + Copy,
 {
     data: Vec<T>,
 }
 
-impl<T> Vector<T>
+impl<T, const N: usize> Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -88,22 +88,22 @@ where
     /// assert_eq!(v.len(), 5);
     /// ```
     pub fn len(&self) -> usize {
-        self.data.len()
+        N
     }
 }
 
 // Numeric vector comparison
-impl<T> PartialEq for Vector<T>
+impl<T, const N: usize> PartialEq for Vector<T, { N }>
 where
     T: Num + Copy,
 {
-    fn eq(&self, other: &Vector<T>) -> bool {
+    fn eq(&self, other: &Vector<T, { N }>) -> bool {
         if self.data != other.data {
             return false;
         }
         true
     }
-    fn ne(&self, other: &Vector<T>) -> bool {
+    fn ne(&self, other: &Vector<T, { N }>) -> bool {
         if self.data == other.data {
             return false;
         }
@@ -111,7 +111,7 @@ where
     }
 }
 
-impl<T> fmt::Debug for Vector<T>
+impl<T, const N: usize> fmt::Debug for Vector<T, { N }>
 where
     T: Num + Copy + fmt::Debug,
 {
@@ -120,20 +120,20 @@ where
     }
 }
 
-/// Sub numeric vector is a reference to contiguous elements
-/// in the numeric vector.
-#[derive(Debug)]
-pub struct SubVector<'a, T>
-where
-    T: Num + Copy,
-{
-    // Offset sub numeric vector from the start of the vector
-    offset: usize,
-    // The size of the sub numeric vector
-    size: usize,
-    // The original numeric vector; where to get the elements from
-    source: &'a Vector<T>,
-}
+// Sub numeric vector is a reference to contiguous elements
+// in the numeric vector.
+// #[derive(Debug)]
+// pub struct SubVector<'a, T>
+// where
+//     T: Num + Copy,
+// {
+//     // Offset sub numeric vector from the start of the vector
+//     offset: usize,
+//     // The size of the sub numeric vector
+//     size: usize,
+//     // The original numeric vector; where to get the elements from
+//     source: &'a Vector<T>,
+// }
 
 //impl<'a, T> SubVector<'a, T>
 //where
@@ -163,32 +163,32 @@ where
 //}
 
 // Sub numeric vector comparison
-impl<'a, T> PartialEq for SubVector<'a, T>
-where
-    T: Num + Copy,
-{
-    fn eq(&self, other: &SubVector<'a, T>) -> bool {
-        if self.offset == other.offset
-            && self.size == other.size
-            && self.source == other.source
-        {
-            true
-        } else {
-            false
-        }
-    }
+// impl<'a, T> PartialEq for SubVector<'a, T>
+// where
+//     T: Num + Copy,
+// {
+//     fn eq(&self, other: &SubVector<'a, T>) -> bool {
+//         if self.offset == other.offset
+//             && self.size == other.size
+//             && self.source == other.source
+//         {
+//             true
+//         } else {
+//             false
+//         }
+//     }
 
-    fn ne(&self, other: &SubVector<'a, T>) -> bool {
-        if self.offset != other.offset
-            || self.size != other.size
-            || self.source != other.source
-        {
-            true
-        } else {
-            false
-        }
-    }
-}
+//     fn ne(&self, other: &SubVector<'a, T>) -> bool {
+//         if self.offset != other.offset
+//             || self.size != other.size
+//             || self.source != other.source
+//         {
+//             true
+//         } else {
+//             false
+//         }
+//     }
+// }
 
 // TODO: implement exponent operator
 // TODO: implement all operators https://www.tutorialspoint.com/numpy/numpy_arithmetic_operations.htm

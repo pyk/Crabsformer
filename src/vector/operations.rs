@@ -25,7 +25,7 @@ use crate::vector::Vector;
 use num::{FromPrimitive, Num};
 use std::ops;
 
-impl<T> Vector<T>
+impl<T, const N: usize> Vector<T, { N }>
 where
     T: Num + Copy,
 {
@@ -43,7 +43,7 @@ where
     /// ```
     ///
     /// [`power_mut`]: #power_mut
-    pub fn power(&self, exp: usize) -> Vector<T> {
+    pub fn power(&self, exp: usize) -> Vector<T, { N }> {
         self.elements().map(|x| num::pow(*x, exp)).collect()
     }
 
@@ -75,12 +75,15 @@ where
     /// let y = x.filter(|x| x >= 2);
     /// assert_eq!(y, vector![3, 4]);
     /// ```
-    pub fn filter(&self, criteria: impl Fn(T) -> bool) -> Vector<T> {
-        let data = self
+    pub fn filter(&self, criteria: impl Fn(T) -> bool) -> Vector<T, { N }> {
+        let data: Vec<T> = self
             .elements()
             .filter(|&&x| criteria(x))
             .map(|x| *x)
             .collect();
+
+        N = data.len();
+
         Vector { data }
     }
 
@@ -384,11 +387,11 @@ where
     }
 }
 
-impl<T> Clone for Vector<T>
+impl<T, const N: usize> Clone for Vector<T, { N }>
 where
     T: Num + Copy,
 {
-    fn clone(&self) -> Vector<T> {
+    fn clone(&self) -> Vector<T, { N }> {
         Vector {
             data: self.data.clone(),
         }
